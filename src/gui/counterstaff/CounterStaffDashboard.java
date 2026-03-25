@@ -25,24 +25,24 @@ import java.awt.event.*;
  */
 public class CounterStaffDashboard extends JFrame {
 
-    // ─── COLOURS ─────────────────────────────────────────────────────────
+    // COLOURS 
     private static final Color BG_DARK      = new Color(15,  17,  26);
     private static final Color BG_CARD      = new Color(24,  27,  42);
     private static final Color BG_CARD2     = new Color(30,  34,  52);
-    private static final Color ACCENT       = new Color(20, 184, 166);   // teal for counter staff
+    private static final Color ACCENT       = new Color(20, 184, 166);
     private static final Color TEXT_PRIMARY = new Color(240, 241, 255);
     private static final Color TEXT_MUTED   = new Color(148, 151, 180);
     private static final Color BORDER_COLOR = new Color(55,  58,  80);
     private static final Color DANGER       = new Color(239, 68,  68);
 
-    // ─── STATE ───────────────────────────────────────────────────────────
+    // STATE
     private CounterStaff currentStaff;
 
-    // ─── LAYOUT ──────────────────────────────────────────────────────────
+    // LAYOUT
     private CardLayout contentLayout;
     private JPanel     contentPanel;
 
-    // ─────────────────────────────────────────────────────────────────────
+    // CONSTRUCTOR
     public CounterStaffDashboard(CounterStaff staff) {
         this.currentStaff = staff;
 
@@ -66,9 +66,7 @@ public class CounterStaffDashboard extends JFrame {
         setContentPane(root);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  TOP BAR
-    // ─────────────────────────────────────────────────────────────────────
+    // TOP BAR
     private JPanel buildTopBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG_CARD);
@@ -108,9 +106,7 @@ public class CounterStaffDashboard extends JFrame {
         return bar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  SIDEBAR
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
@@ -137,9 +133,7 @@ public class CounterStaffDashboard extends JFrame {
         return sidebar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  CONTENT PANELS
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildContent() {
         contentLayout = new CardLayout();
         contentPanel  = new JPanel(contentLayout);
@@ -154,10 +148,9 @@ public class CounterStaffDashboard extends JFrame {
         return contentPanel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 1 — MY PROFILE
     //  TODO (Member 3): Allow staff to edit their own details
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -203,10 +196,9 @@ public class CounterStaffDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 2 — CUSTOMERS
     //  TODO (Member 3): Full CRUD for customers
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildCustomersPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -235,6 +227,7 @@ public class CounterStaffDashboard extends JFrame {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
+
         // TODO (Member 3): Load from customers.txt — join with users.txt for names
         // SAMPLE placeholder row:
         model.addRow(new Object[]{"C001", "John", "Tan", "john@email.com", "0167654321"});
@@ -262,10 +255,9 @@ public class CounterStaffDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 3 — APPOINTMENTS
     //  TODO (Member 3): Create and assign appointments; check availability
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildAppointmentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -312,10 +304,9 @@ public class CounterStaffDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 4 — COLLECT PAYMENT
     //  TODO (Member 3): Process payment and generate receipt
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildPaymentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -361,9 +352,8 @@ public class CounterStaffDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  SHARED HELPERS
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);

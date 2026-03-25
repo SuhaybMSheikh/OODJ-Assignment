@@ -37,7 +37,7 @@ public class Appointment {
                date + "|" + time + "|" + serviceType + "|" + status + "|" + counterStaffID;
     }
 
-    // ─── GETTERS ────────────────────────────────────────────────────────────
+    // GETTERS
     public String getAppointmentID()  { return appointmentID; }
     public String getCustomerID()     { return customerID; }
     public String getTechnicianID()   { return technicianID; }
@@ -47,7 +47,7 @@ public class Appointment {
     public String getStatus()         { return status; }
     public String getCounterStaffID() { return counterStaffID; }
 
-    // ─── SETTERS ────────────────────────────────────────────────────────────
+    // SETTERS
     public void setStatus(String status)           { this.status = status; }
     public void setTechnicianID(String techID)     { this.technicianID = techID; }
     public void setDate(String date)               { this.date = date; }

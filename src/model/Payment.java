@@ -2,7 +2,7 @@ package model;
 
 /**
  * MODEL CLASS — Payment
- * ----------------------
+ * 
  * Represents one row from payments.txt
  * Format: P001|A001|50.00|2025-05-10|Paid
  *         [0]  [1]  [2]   [3]        [4]
@@ -29,14 +29,14 @@ public class Payment {
                String.format("%.2f", amount) + "|" + date + "|" + status;
     }
 
-    // ─── GETTERS ────────────────────────────────────────────────────────────
+    // GETTERS
     public String getPaymentID()     { return paymentID; }
     public String getAppointmentID() { return appointmentID; }
     public double getAmount()        { return amount; }
     public String getDate()          { return date; }
     public String getStatus()        { return status; }
 
-    // ─── SETTERS ────────────────────────────────────────────────────────────
+    // SETTERS
     public void setStatus(String status) { this.status = status; }
     public void setAmount(double amount) { this.amount = amount; }
 }

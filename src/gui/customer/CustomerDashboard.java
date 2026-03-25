@@ -28,24 +28,24 @@ import java.util.List;
  */
 public class CustomerDashboard extends JFrame {
 
-    // ─── COLOURS ─────────────────────────────────────────────────────────
+    // COLOURS
     private static final Color BG_DARK      = new Color(15,  17,  26);
     private static final Color BG_CARD      = new Color(24,  27,  42);
     private static final Color BG_CARD2     = new Color(30,  34,  52);
-    private static final Color ACCENT       = new Color(236, 72, 153);   // pink for customers
+    private static final Color ACCENT       = new Color(236, 72, 153);
     private static final Color TEXT_PRIMARY = new Color(240, 241, 255);
     private static final Color TEXT_MUTED   = new Color(148, 151, 180);
     private static final Color BORDER_COLOR = new Color(55,  58,  80);
     private static final Color DANGER       = new Color(239, 68,  68);
 
-    // ─── STATE ───────────────────────────────────────────────────────────
+    // STATE
     private Customer currentCustomer;
 
-    // ─── LAYOUT ──────────────────────────────────────────────────────────
+    // LAYOUT
     private CardLayout contentLayout;
     private JPanel     contentPanel;
 
-    // ─────────────────────────────────────────────────────────────────────
+    // CONSTRUCTOR
     public CustomerDashboard(Customer customer) {
         this.currentCustomer = customer;
 
@@ -67,9 +67,8 @@ public class CustomerDashboard extends JFrame {
         setContentPane(root);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+
     //  TOP BAR
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildTopBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG_CARD);
@@ -109,9 +108,7 @@ public class CustomerDashboard extends JFrame {
         return bar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  SIDEBAR
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
@@ -137,9 +134,7 @@ public class CustomerDashboard extends JFrame {
         return sidebar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  CONTENT PANELS
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildContent() {
         contentLayout = new CardLayout();
         contentPanel  = new JPanel(contentLayout);
@@ -153,10 +148,9 @@ public class CustomerDashboard extends JFrame {
         return contentPanel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 1 — MY PROFILE
     //  TODO (Member 1): Allow customer to edit their own details
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -199,10 +193,10 @@ public class CustomerDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 2 — SERVICE HISTORY
     //  Shows this customer's past appointments + payment status + feedback
-    // ═════════════════════════════════════════════════════════════════════
+
     private JPanel buildHistoryPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -263,10 +257,9 @@ public class CustomerDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 3 — LEAVE A COMMENT
     //  TODO (Member 1): Allow customer to leave a comment on their appointments
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildCommentPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 20));
         panel.setBackground(BG_DARK);
@@ -384,9 +377,8 @@ public class CustomerDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  SHARED HELPERS
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);

@@ -13,7 +13,6 @@ import javax.swing.*;
  *   2. Navigate to the project root:  cd path/to/APU_ASC
  *   3. Compile ALL files:
  *        Windows:  javac -d bin -sourcepath src src/main/Main.java
- *        Mac/Linux: same command
  *   4. Run:
  *        java -cp bin main.Main
  */

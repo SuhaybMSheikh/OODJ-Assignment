@@ -2,7 +2,7 @@ package model;
 
 /**
  * MODEL CLASS — Feedback
- * -----------------------
+ * 
  * Represents one row from feedbacks.txt
  * Format: A001|U003|Replaced brake pads. All good.
  *         [0]  [1]  [2...]

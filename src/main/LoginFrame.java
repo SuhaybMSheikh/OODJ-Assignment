@@ -17,21 +17,16 @@ import java.io.IOException;
 
 /**
  * GUI CLASS — LoginFrame
- * -----------------------
- * Colour scheme derived from the APU logo:
- *   Primary   — Navy blue  #060E28  (globe / outer body)
- *   Secondary — Gold       #F5A800  (orbital rings)
- *   Tertiary  — Crimson    #C8102E  (underline accent)
  */
 public class LoginFrame extends JFrame {
 
-    // ─── APU COLOUR PALETTE ──────────────────────────────────────────────────
+    // APU COLOUR PALETTE
     static final Color BG_DARK      = new Color(6,  14,  40);
     static final Color BG_CARD      = new Color(10, 22,  58);
     static final Color BG_CARD2     = new Color(14, 30,  74);
-    static final Color ACCENT       = new Color(245, 168,  0);   // APU gold
+    static final Color ACCENT       = new Color(245, 168,  0);
     static final Color ACCENT_HOVER = new Color(220, 148,  0);
-    static final Color ACCENT2      = new Color(200,  16, 46);   // APU crimson
+    static final Color ACCENT2      = new Color(200,  16, 46);
     static final Color TEXT_PRIMARY = new Color(235, 238, 255);
     static final Color TEXT_MUTED   = new Color(140, 155, 200);
     static final Color BORDER_COLOR = new Color(30,  50, 100);
@@ -42,11 +37,11 @@ public class LoginFrame extends JFrame {
     private static final Color COL_TECH     = new Color(200,  16,  46); // crimson
     private static final Color COL_CUSTOMER = new Color( 56, 130, 246); // sky blue
 
-    // ─── STATE ───────────────────────────────────────────────────────────────
+    // STATE
     private String        selectedRole = "";
     private BufferedImage logoImage    = null;
 
-    // ─── LAYOUT ──────────────────────────────────────────────────────────────
+    // LAYOUT
     private CardLayout cardLayout;
     private JPanel     mainPanel;
 
@@ -56,7 +51,7 @@ public class LoginFrame extends JFrame {
     private JLabel         roleLabel;
     private JLabel         errorLabel;
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // CONSTRUCTOR
     public LoginFrame() {
         setTitle("APU Automotive Service Centre");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -85,14 +80,12 @@ public class LoginFrame extends JFrame {
         cardLayout.show(mainPanel, "ROLE_SELECT");
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
     //  SCREEN 1 — ROLE SELECTION
-    // ═════════════════════════════════════════════════════════════════════════
     private JPanel buildRoleSelectScreen() {
         JPanel screen = new JPanel(new BorderLayout());
         screen.setBackground(BG_DARK);
 
-        // ── Left branding panel ───────────────────────────────────────────────
+        // Left branding panel
         JPanel leftPanel = new JPanel() {
             @Override protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -154,7 +147,7 @@ public class LoginFrame extends JFrame {
         brandBox.add(tagline);
         leftPanel.add(brandBox);
 
-        // ── Right role-select panel ───────────────────────────────────────────
+        // Right role-select panel
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBackground(BG_CARD);
         rightPanel.setBorder(new EmptyBorder(48, 48, 48, 48));
@@ -200,9 +193,8 @@ public class LoginFrame extends JFrame {
         return screen;
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
+
     //  SCREEN 2 — LOGIN FORM
-    // ═════════════════════════════════════════════════════════════════════════
     private JPanel buildLoginScreen() {
         JPanel screen = new JPanel(new BorderLayout());
         screen.setBackground(BG_DARK);
@@ -322,10 +314,9 @@ public class LoginFrame extends JFrame {
         return screen;
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    //  APU LOGO CIRCLE
-    //  Clips logo_apu.jpg into a circle with a gold ring border
-    // ═════════════════════════════════════════════════════════════════════════
+
+    //  APU LOGO
+    //  Clips logo_apu.jpg into a square with a gold ring border
     private JPanel buildLogo(int size) {
     JPanel square = new JPanel() {
         @Override protected void paintComponent(Graphics g) {
@@ -365,9 +356,8 @@ public class LoginFrame extends JFrame {
     return square;
 }
 
-    // ═════════════════════════════════════════════════════════════════════════
+
     //  LOGIN LOGIC
-    // ═════════════════════════════════════════════════════════════════════════
     private void handleLogin() {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword()).trim();
@@ -399,9 +389,8 @@ public class LoginFrame extends JFrame {
         errorLabel.setText(" ");
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
+
     //  COMPONENT BUILDERS
-    // ═════════════════════════════════════════════════════════════════════════
     private JPanel makeRoleCard(String role, String subtitle, Color accent, String initial) {
         JPanel card = new JPanel() {
             private boolean hovered = false;

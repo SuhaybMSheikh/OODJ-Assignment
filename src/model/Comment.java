@@ -2,7 +2,7 @@ package model;
 
 /**
  * MODEL CLASS — Comment
- * ----------------------
+ * 
  * Represents one row from comments.txt
  * Format: A001|C001|Great service, very professional!
  *         [0]  [1]  [2...]

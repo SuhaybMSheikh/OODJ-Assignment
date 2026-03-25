@@ -27,25 +27,25 @@ import java.util.List;
  */
 public class TechnicianDashboard extends JFrame {
 
-    // ─── COLOURS ─────────────────────────────────────────────────────────
+    // COLOURS
     private static final Color BG_DARK      = new Color(15,  17,  26);
     private static final Color BG_CARD      = new Color(24,  27,  42);
     private static final Color BG_CARD2     = new Color(30,  34,  52);
-    private static final Color ACCENT       = new Color(245, 158, 11);   // amber for technicians
+    private static final Color ACCENT       = new Color(245, 158, 11);
     private static final Color TEXT_PRIMARY = new Color(240, 241, 255);
     private static final Color TEXT_MUTED   = new Color(148, 151, 180);
     private static final Color BORDER_COLOR = new Color(55,  58,  80);
     private static final Color DANGER       = new Color(239, 68,  68);
     private static final Color SUCCESS      = new Color(34, 197,  94);
 
-    // ─── STATE ───────────────────────────────────────────────────────────
+    // STATE
     private Technician currentTech;
 
-    // ─── LAYOUT ──────────────────────────────────────────────────────────
+    // LAYOUT
     private CardLayout contentLayout;
     private JPanel     contentPanel;
 
-    // ─────────────────────────────────────────────────────────────────────
+    // CONSTRUCTOR
     public TechnicianDashboard(Technician tech) {
         this.currentTech = tech;
 
@@ -67,9 +67,7 @@ public class TechnicianDashboard extends JFrame {
         setContentPane(root);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  TOP BAR
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildTopBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG_CARD);
@@ -109,9 +107,7 @@ public class TechnicianDashboard extends JFrame {
         return bar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  SIDEBAR
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
@@ -136,9 +132,7 @@ public class TechnicianDashboard extends JFrame {
         return sidebar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  CONTENT PANELS
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildContent() {
         contentLayout = new CardLayout();
         contentPanel  = new JPanel(contentLayout);
@@ -151,10 +145,9 @@ public class TechnicianDashboard extends JFrame {
         return contentPanel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 1 — MY PROFILE
     //  TODO (Member 4): Allow technician to edit their own details
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -196,17 +189,16 @@ public class TechnicianDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 2 — MY APPOINTMENTS
     //  Split view: list on left, details on right
     //  TODO (Member 4): Load only THIS technician's appointments
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildAppointmentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(16, 0));
         panel.setBackground(BG_DARK);
         panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
-        // ── Left: appointment list ─────────────────────────────────────────
+        // Left: appointment list
         JPanel leftPane = new JPanel(new BorderLayout(0, 12));
         leftPane.setOpaque(false);
         leftPane.setPreferredSize(new Dimension(420, 0));
@@ -237,7 +229,7 @@ public class TechnicianDashboard extends JFrame {
         leftPane.add(heading, BorderLayout.NORTH);
         leftPane.add(scroll,  BorderLayout.CENTER);
 
-        // ── Right: detail panel ────────────────────────────────────────────
+        // Right: detail panel
         JPanel rightPane = new JPanel();
         rightPane.setLayout(new BoxLayout(rightPane, BoxLayout.Y_AXIS));
         rightPane.setBackground(BG_CARD);
@@ -276,7 +268,7 @@ public class TechnicianDashboard extends JFrame {
         rightPane.add(Box.createVerticalStrut(10));
         rightPane.add(feedbackBtn);
 
-        // ── Wire table selection to detail panel ───────────────────────────
+        // Wire table selection to detail panel
         table.getSelectionModel().addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
             int row = table.getSelectedRow();
@@ -376,9 +368,7 @@ public class TechnicianDashboard extends JFrame {
         }
     }
 
-    // ═════════════════════════════════════════════════════════════════════
     //  SHARED HELPERS
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);

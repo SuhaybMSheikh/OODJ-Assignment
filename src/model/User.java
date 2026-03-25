@@ -2,23 +2,16 @@ package model;
 
 /**
  * ABSTRACT SUPERCLASS — User
- * ---------------------------
- * This is the parent class for ALL user types in the system.
- * Manager, CounterStaff, Technician, and Customer all EXTEND this class.
  *
- * OOP CONCEPT: ABSTRACTION + INHERITANCE
- * - "abstract" means you cannot create a plain User object directly.
- *   You must create one of the specific subtypes (Manager, etc.)
- * - All subclasses INHERIT the fields and methods defined here.
- * - showDashboard() is abstract — every subclass MUST implement it.
+ * This is the parent class for ALL user types in the system.
+ * Manager, CounterStaff, Technician, and Customer all extend this class.
  */
 public abstract class User {
 
-    // ENCAPSULATION: fields are private — only accessible via getters/setters
     private String userID;
     private String username;
     private String password;
-    private String role;       // "Manager", "CounterStaff", "Technician", "Customer"
+    private String role;
     private String firstName;
     private String lastName;
     private String email;
@@ -52,7 +45,7 @@ public abstract class User {
                firstName + "|" + lastName + "|" + email + "|" + phone;
     }
 
-    // ─── GETTERS ────────────────────────────────────────────────────────────
+    // GETTERS
     public String getUserID()    { return userID; }
     public String getUsername()  { return username; }
     public String getPassword()  { return password; }
@@ -62,7 +55,7 @@ public abstract class User {
     public String getEmail()     { return email; }
     public String getPhone()     { return phone; }
 
-    // ─── SETTERS ────────────────────────────────────────────────────────────
+    // SETTERS
     public void setUsername(String username)   { this.username = username; }
     public void setPassword(String password)   { this.password = password; }
     public void setFirstName(String firstName) { this.firstName = firstName; }

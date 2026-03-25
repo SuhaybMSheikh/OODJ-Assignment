@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class ManagerDashboard extends JFrame {
 
-    // ─── COLOURS (match the login screen theme) ──────────────────────────
+    // COLOURS
     protected static final Color BG_DARK      = new Color(15,  17,  26);
     protected static final Color BG_CARD      = new Color(24,  27,  42);
     protected static final Color BG_CARD2     = new Color(30,  34,  52);
@@ -44,20 +44,20 @@ public class ManagerDashboard extends JFrame {
     protected static final Color SUCCESS      = new Color(34,  197,  94);
     protected static final Color DANGER       = new Color(239,  68,  68);
 
-    // ─── STATE ───────────────────────────────────────────────────────────
+    // STATE
     private Manager currentManager;
 
-    // ─── LAYOUT ──────────────────────────────────────────────────────────
+    // LAYOUT
     private CardLayout contentLayout;
     private JPanel     contentPanel;
 
-    // ─── PANELS (one per sidebar section) ────────────────────────────────
+    // PANELS (one per sidebar section)
     private JPanel usersPanel;
     private JPanel pricesPanel;
     private JPanel feedbacksPanel;
     private JPanel reportsPanel;
 
-    // ─────────────────────────────────────────────────────────────────────
+    // CONSTRUCTOR
     public ManagerDashboard(Manager manager) {
         this.currentManager = manager;
 
@@ -70,9 +70,7 @@ public class ManagerDashboard extends JFrame {
         buildUI();
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  BUILD FULL WINDOW
-    // ─────────────────────────────────────────────────────────────────────
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(BG_DARK);
@@ -84,9 +82,7 @@ public class ManagerDashboard extends JFrame {
         setContentPane(root);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  TOP BAR
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildTopBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG_CARD);
@@ -121,9 +117,7 @@ public class ManagerDashboard extends JFrame {
         return bar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  SIDEBAR
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
@@ -152,9 +146,7 @@ public class ManagerDashboard extends JFrame {
         return sidebar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     //  CONTENT AREA (card-switched panels)
-    // ─────────────────────────────────────────────────────────────────────
     private JPanel buildContent() {
         contentLayout = new CardLayout();
         contentPanel  = new JPanel(contentLayout);
@@ -175,16 +167,15 @@ public class ManagerDashboard extends JFrame {
         return contentPanel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 1 — MANAGE USERS
     //  TODO (Member 2): Implement full CRUD for users
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildUsersPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
         panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
-        // ── Header row ────────────────────────────────────────────────────
+        // Header row
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setOpaque(false);
 
@@ -198,7 +189,7 @@ public class ManagerDashboard extends JFrame {
         headerRow.add(heading, BorderLayout.WEST);
         headerRow.add(addBtn,  BorderLayout.EAST);
 
-        // ── Table ─────────────────────────────────────────────────────────
+        // Table
         String[] columns = {"ID", "Username", "Role", "First Name", "Last Name", "Email", "Phone"};
         DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -211,7 +202,7 @@ public class ManagerDashboard extends JFrame {
 
         JScrollPane scrollPane = makeScrollPane(table);
 
-        // ── Action buttons row ────────────────────────────────────────────
+        // Action buttons row
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         actionRow.setOpaque(false);
 
@@ -289,10 +280,10 @@ public class ManagerDashboard extends JFrame {
             "Delete User — Coming Soon", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 2 — SERVICE PRICES
     //  TODO (Member 2): Implement price-setting for Normal and Major service
-    // ═════════════════════════════════════════════════════════════════════
+
     private JPanel buildPricesPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 24));
         panel.setBackground(BG_DARK);
@@ -302,7 +293,7 @@ public class ManagerDashboard extends JFrame {
         heading.setFont(new Font("SansSerif", Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
 
-        // ── Price cards ───────────────────────────────────────────────────
+        // Price cards
         JPanel cardsRow = new JPanel(new GridLayout(1, 2, 20, 0));
         cardsRow.setOpaque(false);
         cardsRow.setMaximumSize(new Dimension(600, 200));
@@ -357,10 +348,9 @@ public class ManagerDashboard extends JFrame {
         return card;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 3 — FEEDBACKS & COMMENTS
     //  TODO (Member 2): Display all feedbacks + comments in a readable layout
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildFeedbacksPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -396,10 +386,9 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
+
     //  PANEL 4 — REPORTS
     //  TODO (Member 2): Show summary stats — revenue, count by type, etc.
-    // ═════════════════════════════════════════════════════════════════════
     private JPanel buildReportsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 24));
         panel.setBackground(BG_DARK);
@@ -460,10 +449,8 @@ public class ManagerDashboard extends JFrame {
         return card;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  SHARED COMPONENT BUILDERS
-    // ═════════════════════════════════════════════════════════════════════
 
+    //  SHARED COMPONENT BUILDERS
     /** Creates a styled sidebar navigation button */
     private JButton makeNavButton(String label, String cardName) {
         JButton btn = new JButton(label) {

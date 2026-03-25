@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * UTILITY CLASS — FileHandler
- * ----------------------------
+ * 
  * This is the ONLY class that directly reads and writes .txt files.
  * Every dashboard calls these static methods instead of doing file I/O themselves.
  *
@@ -20,7 +20,7 @@ import java.util.List;
  */
 public class FileHandler {
 
-    // ─── FILE PATHS ─────────────────────────────────────────────────────────
+    // FILE PATHS
     // Using relative paths so the project works on any computer.
     // These paths are relative to wherever you RUN the program from (the project root).
     private static final String USERS_FILE        = "src/data/users.txt";
@@ -31,10 +31,7 @@ public class FileHandler {
     private static final String FEEDBACKS_FILE    = "src/data/feedbacks.txt";
     private static final String COMMENTS_FILE     = "src/data/comments.txt";
 
-    // ════════════════════════════════════════════════════════════════════════
     //  USERS
-    // ════════════════════════════════════════════════════════════════════════
-
     /**
      * Reads users.txt and returns a List of User objects.
      * Each line is split by "|" and parsed into the correct subclass.
@@ -126,10 +123,7 @@ public class FileHandler {
         return String.format("U%03d", max + 1);  // e.g. "U005"
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     //  APPOINTMENTS
-    // ════════════════════════════════════════════════════════════════════════
-
     public static List<Appointment> loadAllAppointments() {
         List<Appointment> list = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(APPOINTMENTS_FILE))) {
@@ -170,10 +164,7 @@ public class FileHandler {
         return String.format("A%03d", max + 1);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     //  PAYMENTS
-    // ════════════════════════════════════════════════════════════════════════
-
     public static List<Payment> loadAllPayments() {
         List<Payment> list = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(PAYMENTS_FILE))) {
@@ -214,10 +205,7 @@ public class FileHandler {
         return String.format("P%03d", max + 1);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     //  FEEDBACKS
-    // ════════════════════════════════════════════════════════════════════════
-
     public static List<Feedback> loadAllFeedbacks() {
         List<Feedback> list = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(FEEDBACKS_FILE))) {
@@ -247,10 +235,7 @@ public class FileHandler {
         }
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     //  COMMENTS
-    // ════════════════════════════════════════════════════════════════════════
-
     public static List<Comment> loadAllComments() {
         List<Comment> list = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(COMMENTS_FILE))) {
@@ -279,10 +264,7 @@ public class FileHandler {
         }
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     //  SERVICES (prices)
-    // ════════════════════════════════════════════════════════════════════════
-
     /**
      * Returns price for a given service type ("Normal" or "Major").
      * Returns 0.0 if not found.

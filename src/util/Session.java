@@ -4,7 +4,7 @@ import model.User;
 
 /**
  * UTILITY CLASS — Session
- * ------------------------
+ *
  * Stores the currently logged-in user so any class can access it.
  *
  * OOP CONCEPT: This is a SINGLETON-style utility — one shared state.

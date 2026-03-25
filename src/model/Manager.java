@@ -4,7 +4,7 @@ import gui.manager.ManagerDashboard;
 
 /**
  * SUBCLASS — Manager extends User
- * --------------------------------
+ * 
  * OOP CONCEPT: INHERITANCE
  * Manager inherits all fields/methods from User and adds its own behaviour.
  *

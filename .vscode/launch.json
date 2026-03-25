@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run APU-ASC",
+            "request": "launch",
+            "mainClass": "main.Main",
+            "projectName": "APU_ASC",
+            "classPaths": ["${workspaceFolder}/bin"],
+            "sourcePaths": ["${workspaceFolder}/src"],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

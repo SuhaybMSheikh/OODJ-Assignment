@@ -16,6 +16,7 @@ import javax.swing.*;
  *   4. Run:
  *        java -cp bin main.Main
  */
+
 public class Main {
 
     public static void main(String[] args) {

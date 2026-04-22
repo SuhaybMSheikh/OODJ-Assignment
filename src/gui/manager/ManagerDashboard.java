@@ -1,6 +1,8 @@
 package gui.manager;
 
 import model.Manager;
+import model.CounterStaff;
+import model.Technician;
 import model.User;
 import util.FileHandler;
 import util.Session;
@@ -212,13 +214,13 @@ public class ManagerDashboard extends JFrame {
 
         editBtn.addActionListener(e -> {
             int row = table.getSelectedRow();
-            if (row == -1) { showInfo("Please select a user to edit."); return; }
+            if (row == -1) { showThemedInfo("Please select a user to edit."); return; }
             openEditUserDialog((String) tableModel.getValueAt(row, 0), tableModel);
         });
 
         deleteBtn.addActionListener(e -> {
             int row = table.getSelectedRow();
-            if (row == -1) { showInfo("Please select a user to delete."); return; }
+            if (row == -1) { showThemedInfo("Please select a user to delete."); return; }
             String uid = (String) tableModel.getValueAt(row, 0);
             deleteUser(uid, tableModel);
         });
@@ -246,38 +248,378 @@ public class ManagerDashboard extends JFrame {
     }
 
     /**
-     * TODO (Member 2): Build the Add User dialog.
-     * It should collect: username, password, role, first name, last name, email, phone.
-     * On confirm: generate a new ID, add to users.txt via FileHandler.
+     * Opens the Add User dialog. Collects user details and creates a new user.
      */
     private void openAddUserDialog() {
-        // PLACEHOLDER — Member 2 replaces this with a full JDialog form
-        JOptionPane.showMessageDialog(this,
-            "TODO: Open Add User dialog here.\n" +
-            "Collect user details and call FileHandler.saveAllUsers().",
-            "Add User — Coming Soon", JOptionPane.INFORMATION_MESSAGE);
+        JDialog dialog = new JDialog(this, "Add New User", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setSize(450, 500);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Username
+        panel.add(createFormLabel("Username"));
+        JTextField usernameField = new JTextField();
+        usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        usernameField.setBackground(BG_CARD);
+        usernameField.setForeground(TEXT_PRIMARY);
+        usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(usernameField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Password
+        panel.add(createFormLabel("Password"));
+        JPasswordField passwordField = new JPasswordField();
+        passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        passwordField.setBackground(BG_CARD);
+        passwordField.setForeground(TEXT_PRIMARY);
+        passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(passwordField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Role
+        panel.add(createFormLabel("Role"));
+        JComboBox<String> roleCombo = new JComboBox<>(new String[]{"Manager", "CounterStaff", "Technician"});
+        roleCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        roleCombo.setBackground(BG_CARD);
+        roleCombo.setForeground(TEXT_PRIMARY);
+        panel.add(roleCombo);
+        panel.add(Box.createVerticalStrut(12));
+
+        // First Name
+        panel.add(createFormLabel("First Name"));
+        JTextField firstNameField = new JTextField();
+        firstNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        firstNameField.setBackground(BG_CARD);
+        firstNameField.setForeground(TEXT_PRIMARY);
+        firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(firstNameField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Last Name
+        panel.add(createFormLabel("Last Name"));
+        JTextField lastNameField = new JTextField();
+        lastNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        lastNameField.setBackground(BG_CARD);
+        lastNameField.setForeground(TEXT_PRIMARY);
+        lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(lastNameField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Email
+        panel.add(createFormLabel("Email"));
+        JTextField emailField = new JTextField();
+        emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        emailField.setBackground(BG_CARD);
+        emailField.setForeground(TEXT_PRIMARY);
+        emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(emailField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Phone
+        panel.add(createFormLabel("Phone"));
+        JTextField phoneField = new JTextField();
+        phoneField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        phoneField.setBackground(BG_CARD);
+        phoneField.setForeground(TEXT_PRIMARY);
+        phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(phoneField);
+        panel.add(Box.createVerticalStrut(20));
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton cancelBtn = makeSecondaryButton("Cancel");
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        JButton saveBtn = makePrimaryButton("Add User");
+        saveBtn.addActionListener(e -> {
+            String username = usernameField.getText().trim();
+            String password = new String(passwordField.getPassword());
+            String role = (String) roleCombo.getSelectedItem();
+            String firstName = firstNameField.getText().trim();
+            String lastName = lastNameField.getText().trim();
+            String email = emailField.getText().trim();
+            String phone = phoneField.getText().trim();
+
+            String error = validateUserInput(username, password, firstName, lastName, email, phone, null);
+            if (error != null) {
+                showThemedInfo(error);
+                return;
+            }
+
+            // Generate new ID and create user
+            String newID = FileHandler.generateNextUserID();
+            User newUser = createUserFromRole(newID, username, password, role, firstName, lastName, email, phone);
+
+            List<User> users = FileHandler.loadAllUsers();
+            users.add(newUser);
+            FileHandler.saveAllUsers(users);
+
+            DefaultTableModel tableModel = (DefaultTableModel) ((JTable) ((JScrollPane) ((JPanel) contentPanel.getComponent(0)).getComponent(1)).getViewport().getComponent(0)).getModel();
+            refreshUsersTable(tableModel);
+
+            showThemedInfo("User added successfully!");
+            dialog.dispose();
+        });
+
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.setBackground(BG_DARK);
+        scrollPane.getViewport().setBackground(BG_DARK);
+        scrollPane.setBorder(null);
+
+        // Add scrollPane and buttons to dialog
+        JPanel contentPane = new JPanel(new BorderLayout());
+        contentPane.setBackground(BG_DARK);
+        contentPane.add(scrollPane, BorderLayout.CENTER);
+        contentPane.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.add(contentPane);
+        dialog.setVisible(true);
     }
 
     /**
-     * TODO (Member 2): Build the Edit User dialog.
-     * Pre-fill form with existing data, update the record on confirm.
+     * Opens the Edit User dialog. Pre-fills with existing data, role is locked.
      */
     private void openEditUserDialog(String userID, DefaultTableModel model) {
-        // PLACEHOLDER
-        JOptionPane.showMessageDialog(this,
-            "TODO: Open Edit dialog for User ID: " + userID,
-            "Edit User — Coming Soon", JOptionPane.INFORMATION_MESSAGE);
+        List<User> users = FileHandler.loadAllUsers();
+        User targetUser = users.stream().filter(u -> u.getUserID().equals(userID)).findFirst().orElse(null);
+        
+        if (targetUser == null) {
+            showThemedInfo("User not found.");
+            return;
+        }
+
+        JDialog dialog = new JDialog(this, "Edit User", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setSize(450, 500);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // User ID (read-only)
+        panel.add(createFormLabel("User ID (locked)"));
+        JTextField idField = new JTextField(targetUser.getUserID());
+        idField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        idField.setBackground(BG_CARD2);
+        idField.setForeground(TEXT_MUTED);
+        idField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        idField.setEditable(false);
+        panel.add(idField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Username
+        panel.add(createFormLabel("Username"));
+        JTextField usernameField = new JTextField(targetUser.getUsername());
+        usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        usernameField.setBackground(BG_CARD);
+        usernameField.setForeground(TEXT_PRIMARY);
+        usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(usernameField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Password
+        panel.add(createFormLabel("Password"));
+        JPasswordField passwordField = new JPasswordField(targetUser.getPassword());
+        passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        passwordField.setBackground(BG_CARD);
+        passwordField.setForeground(TEXT_PRIMARY);
+        passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(passwordField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Role (read-only)
+        panel.add(createFormLabel("Role (locked)"));
+        JTextField roleField = new JTextField(targetUser.getRole());
+        roleField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        roleField.setBackground(BG_CARD2);
+        roleField.setForeground(TEXT_MUTED);
+        roleField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        roleField.setEditable(false);
+        panel.add(roleField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // First Name
+        panel.add(createFormLabel("First Name"));
+        JTextField firstNameField = new JTextField(targetUser.getFirstName());
+        firstNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        firstNameField.setBackground(BG_CARD);
+        firstNameField.setForeground(TEXT_PRIMARY);
+        firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(firstNameField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Last Name
+        panel.add(createFormLabel("Last Name"));
+        JTextField lastNameField = new JTextField(targetUser.getLastName());
+        lastNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        lastNameField.setBackground(BG_CARD);
+        lastNameField.setForeground(TEXT_PRIMARY);
+        lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(lastNameField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Email
+        panel.add(createFormLabel("Email"));
+        JTextField emailField = new JTextField(targetUser.getEmail());
+        emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        emailField.setBackground(BG_CARD);
+        emailField.setForeground(TEXT_PRIMARY);
+        emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(emailField);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Phone
+        panel.add(createFormLabel("Phone"));
+        JTextField phoneField = new JTextField(targetUser.getPhone());
+        phoneField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        phoneField.setBackground(BG_CARD);
+        phoneField.setForeground(TEXT_PRIMARY);
+        phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        panel.add(phoneField);
+        panel.add(Box.createVerticalStrut(20));
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton cancelBtn = makeSecondaryButton("Cancel");
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        JButton saveBtn = makePrimaryButton("Save Changes");
+        saveBtn.addActionListener(e -> {
+            String username = usernameField.getText().trim();
+            String password = new String(passwordField.getPassword());
+            String firstName = firstNameField.getText().trim();
+            String lastName = lastNameField.getText().trim();
+            String email = emailField.getText().trim();
+            String phone = phoneField.getText().trim();
+
+            String error = validateUserInput(username, password, firstName, lastName, email, phone, targetUser.getUsername());
+            if (error != null) {
+                showThemedInfo(error);
+                return;
+            }
+
+            // Update user
+            targetUser.setUsername(username);
+            targetUser.setPassword(password);
+            targetUser.setFirstName(firstName);
+            targetUser.setLastName(lastName);
+            targetUser.setEmail(email);
+            targetUser.setPhone(phone);
+
+            FileHandler.saveAllUsers(users);
+            refreshUsersTable(model);
+
+            showThemedInfo("User updated successfully!");
+            dialog.dispose();
+        });
+
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.setBackground(BG_DARK);
+        scrollPane.getViewport().setBackground(BG_DARK);
+        scrollPane.setBorder(null);
+
+        // Add scrollPane and buttons to dialog
+        JPanel contentPane = new JPanel(new BorderLayout());
+        contentPane.setBackground(BG_DARK);
+        contentPane.add(scrollPane, BorderLayout.CENTER);
+        contentPane.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.add(contentPane);
+        dialog.setVisible(true);
     }
 
     /**
-     * TODO (Member 2): Confirm and delete a user from users.txt.
-     * Do not allow deleting yourself.
+     * Deletes a user with confirmation. Prevents self-deletion.
      */
     private void deleteUser(String userID, DefaultTableModel model) {
-        // PLACEHOLDER
-        JOptionPane.showMessageDialog(this,
-            "TODO: Delete User ID: " + userID,
-            "Delete User — Coming Soon", JOptionPane.INFORMATION_MESSAGE);
+        // Prevent self-deletion
+        if (userID.equals(currentManager.getUserID())) {
+            showThemedInfo("You cannot delete your own account!");
+            return;
+        }
+
+        int confirm = showThemedConfirm("Confirm Delete",
+            "Are you sure you want to delete this user? This action cannot be undone.");
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        List<User> users = FileHandler.loadAllUsers();
+        users.removeIf(u -> u.getUserID().equals(userID));
+        FileHandler.saveAllUsers(users);
+
+        refreshUsersTable(model);
+        showThemedInfo("User deleted successfully!");
+    }
+
+    /**
+     * Helper: Validates user input. Returns error message if invalid, null if valid.
+     * skipUsername can be set to the current username to allow keeping the same username on edit.
+     */
+    private String validateUserInput(String username, String password, String firstName, 
+                                     String lastName, String email, String phone, String skipUsername) {
+        if (username.isEmpty()) return "Username cannot be empty.";
+        if (password.isEmpty()) return "Password cannot be empty.";
+        if (firstName.isEmpty()) return "First name cannot be empty.";
+        if (lastName.isEmpty()) return "Last name cannot be empty.";
+        if (email.isEmpty()) return "Email cannot be empty.";
+        if (phone.isEmpty()) return "Phone cannot be empty.";
+
+        // Email format validation (basic)
+        if (!email.contains("@")) return "Please enter a valid email address.";
+
+        // Phone must be numeric
+        if (!phone.matches("\\d+")) return "Phone must contain only digits.";
+
+        // Username uniqueness check (unless it's the same as current username)
+        if (skipUsername == null || !skipUsername.equals(username)) {
+            User existing = FileHandler.findUserByUsername(username);
+            if (existing != null) return "Username already exists. Please choose a different one.";
+        }
+
+        return null;  // all valid
+    }
+
+    /**
+     * Helper: Creates the correct User subclass based on role.
+     */
+    private User createUserFromRole(String userID, String username, String password, String role,
+                                    String firstName, String lastName, String email, String phone) {
+        switch (role) {
+            case "Manager":
+                return new Manager(userID, username, password, firstName, lastName, email, phone);
+            case "CounterStaff":
+                return new CounterStaff(userID, username, password, firstName, lastName, email, phone);
+            case "Technician":
+                return new Technician(userID, username, password, firstName, lastName, email, phone);
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Helper: Creates a styled form label.
+     */
+    private JLabel createFormLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("SansSerif", Font.BOLD, 12));
+        label.setForeground(TEXT_PRIMARY);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
     }
 
 
@@ -556,5 +898,83 @@ public class ManagerDashboard extends JFrame {
     protected void showInfo(String message) {
         JOptionPane.showMessageDialog(this, message, "Info",
             JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Helper: Shows a themed info dialog matching the project color scheme.
+     */
+    private void showThemedInfo(String message) {
+        JDialog dialog = new JDialog(this, "Info", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setSize(400, 180);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        JLabel messageLabel = new JLabel("<html>" + message + "</html>");
+        messageLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        messageLabel.setForeground(TEXT_PRIMARY);
+        messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(messageLabel);
+        panel.add(Box.createVerticalStrut(20));
+
+        JButton okBtn = makePrimaryButton("OK");
+        okBtn.addActionListener(e -> dialog.dispose());
+        okBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(okBtn);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Helper: Shows a themed confirmation dialog matching the project color scheme.
+     */
+    private int showThemedConfirm(String title, String message) {
+        JDialog dialog = new JDialog(this, title, true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setSize(420, 200);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        JLabel messageLabel = new JLabel("<html>" + message + "</html>");
+        messageLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        messageLabel.setForeground(TEXT_PRIMARY);
+        messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(messageLabel);
+        panel.add(Box.createVerticalStrut(20));
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton noBtn = makeSecondaryButton("No");
+        JButton yesBtn = makePrimaryButton("Yes");
+
+        final int[] result = {JOptionPane.NO_OPTION};
+
+        yesBtn.addActionListener(e -> {
+            result[0] = JOptionPane.YES_OPTION;
+            dialog.dispose();
+        });
+
+        noBtn.addActionListener(e -> {
+            result[0] = JOptionPane.NO_OPTION;
+            dialog.dispose();
+        });
+
+        buttonPanel.add(noBtn);
+        buttonPanel.add(yesBtn);
+        panel.add(buttonPanel);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
+        return result[0];
     }
 }

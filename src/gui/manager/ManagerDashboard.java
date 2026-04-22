@@ -22,7 +22,7 @@ import java.util.List;
  * MEMBER 2 is responsible for implementing all features in this file.
  *
  * FEATURES TO IMPLEMENT:
- *   [1] View / Add / Edit / Delete users (managers, counter staff, technicians)
+ *   [1] View / Add / Edit / Delete users (managers, counter staff, technicians) (GUI Fixes Required)
  *   [2] Set prices for Normal service and Major service
  *   [3] View all feedbacks and comments
  *   [4] Analysed reports (total revenue, appointments by type, etc.)

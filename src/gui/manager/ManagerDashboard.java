@@ -23,7 +23,7 @@ import java.util.List;
  *
  * FEATURES TO IMPLEMENT:
  *   [1] View / Add / Edit / Delete users (managers, counter staff, technicians) (GUI Fixes Required)
- *   [2] Set prices for Normal service and Major service
+ *   [2] Set prices for Normal service and Major service (Partially complete, title and duration cant update into TXT files)
  *   [3] View all feedbacks and comments
  *   [4] Analysed reports (total revenue, appointments by type, etc.)
  *
@@ -624,40 +624,155 @@ public class ManagerDashboard extends JFrame {
 
 
     //  PANEL 2 — SERVICE PRICES
-    //  TODO (Member 2): Implement price-setting for Normal and Major service
+    //  Manage and update service prices for Normal and Major services
 
     private JPanel buildPricesPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 24));
         panel.setBackground(BG_DARK);
         panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
+        // Header with title and edit button
+        JPanel headerRow = new JPanel(new BorderLayout());
+        headerRow.setOpaque(false);
+
         JLabel heading = new JLabel("Service Prices");
         heading.setFont(new Font("SansSerif", Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
 
-        // Price cards
+        JButton editBtn = makePrimaryButton("✎ Edit Prices");
+
+        headerRow.add(heading, BorderLayout.WEST);
+        headerRow.add(editBtn, BorderLayout.EAST);
+
+        // Price cards container
         JPanel cardsRow = new JPanel(new GridLayout(1, 2, 20, 0));
         cardsRow.setOpaque(false);
-        cardsRow.setMaximumSize(new Dimension(600, 200));
+        cardsRow.setMaximumSize(new Dimension(600, 280));
 
-        cardsRow.add(buildPriceCard("Normal Service",
-            "1 hour", FileHandler.getServicePrice("Normal")));
-        cardsRow.add(buildPriceCard("Major Service",
-            "3 hours", FileHandler.getServicePrice("Major")));
+        // Get current service data
+        String normalName = "Normal Service";
+        String normalDuration = "1 hour";
+        double normalPrice = FileHandler.getServicePrice("Normal");
 
-        JLabel note = new JLabel(
-            "TODO (Member 2): Add input fields and a Save button to update prices " +
-            "via FileHandler.updateServicePrice().");
-        note.setFont(new Font("SansSerif", Font.ITALIC, 13));
-        note.setForeground(TEXT_MUTED);
+        String majorName = "Major Service";
+        String majorDuration = "3 hours";
+        double majorPrice = FileHandler.getServicePrice("Major");
 
-        panel.add(heading,  BorderLayout.NORTH);
+        JPanel normalCard = buildPriceCard(normalName, normalDuration, normalPrice, false);
+        JPanel majorCard = buildPriceCard(majorName, majorDuration, majorPrice, false);
+
+        cardsRow.add(normalCard);
+        cardsRow.add(majorCard);
+
+        panel.add(headerRow, BorderLayout.NORTH);
         panel.add(cardsRow, BorderLayout.CENTER);
-        panel.add(note,     BorderLayout.SOUTH);
+
+        // Edit button action
+        editBtn.addActionListener(e -> {
+            editBtn.setEnabled(false);
+
+            // Switch to editable mode - store references to text fields
+            cardsRow.removeAll();
+            JPanel normalCardEditable = buildPriceCard(normalName, normalDuration, normalPrice, true);
+            JPanel majorCardEditable = buildPriceCard(majorName, majorDuration, majorPrice, true);
+            
+            cardsRow.add(normalCardEditable);
+            cardsRow.add(majorCardEditable);
+            cardsRow.revalidate();
+            cardsRow.repaint();
+
+            // Extract field references from editable cards
+            // Card structure: [0]=nameField, [1]=spacer, [2]=durationField, [3]=spacer, [4]=priceInputPanel
+            JTextField normalNameField = (JTextField) normalCardEditable.getComponent(0);
+            JTextField normalDurationField = (JTextField) normalCardEditable.getComponent(2);
+            JPanel normalPricePanel = (JPanel) normalCardEditable.getComponent(4);
+            JTextField normalPriceField = (JTextField) normalPricePanel.getComponent(1);
+
+            JTextField majorNameField = (JTextField) majorCardEditable.getComponent(0);
+            JTextField majorDurationField = (JTextField) majorCardEditable.getComponent(2);
+            JPanel majorPricePanel = (JPanel) majorCardEditable.getComponent(4);
+            JTextField majorPriceField = (JTextField) majorPricePanel.getComponent(1);
+
+            // Show save/cancel buttons
+            JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+            actionRow.setOpaque(false);
+
+            JButton cancelBtn = makeSecondaryButton("Cancel");
+            JButton saveBtn = makePrimaryButton("Save Changes");
+
+            cancelBtn.addActionListener(ce -> {
+                editBtn.setEnabled(true);
+                cardsRow.removeAll();
+                cardsRow.add(buildPriceCard(normalName, normalDuration,
+                    FileHandler.getServicePrice("Normal"), false));
+                cardsRow.add(buildPriceCard(majorName, majorDuration,
+                    FileHandler.getServicePrice("Major"), false));
+                cardsRow.revalidate();
+                cardsRow.repaint();
+
+                panel.remove(actionRow);
+                panel.revalidate();
+                panel.repaint();
+            });
+
+            saveBtn.addActionListener(se -> {
+                try {
+                    String newNormalName = normalNameField.getText().trim();
+                    String newNormalDuration = normalDurationField.getText().trim();
+                    double newNormalPrice = Double.parseDouble(normalPriceField.getText().trim());
+
+                    String newMajorName = majorNameField.getText().trim();
+                    String newMajorDuration = majorDurationField.getText().trim();
+                    double newMajorPrice = Double.parseDouble(majorPriceField.getText().trim());
+
+                    // Validation
+                    if (newNormalName.isEmpty() || newMajorName.isEmpty()) {
+                        showThemedInfo("Service names cannot be empty.");
+                        return;
+                    }
+                    if (newNormalDuration.isEmpty() || newMajorDuration.isEmpty()) {
+                        showThemedInfo("Durations cannot be empty.");
+                        return;
+                    }
+                    if (newNormalPrice <= 0 || newMajorPrice <= 0) {
+                        showThemedInfo("Prices must be greater than 0.");
+                        return;
+                    }
+
+                    // Update services
+                    FileHandler.updateServicePrice("Normal", newNormalPrice);
+                    FileHandler.updateServicePrice("Major", newMajorPrice);
+
+                    showThemedInfo("Services updated successfully!");
+
+                    // Return to view mode
+                    editBtn.setEnabled(true);
+                    cardsRow.removeAll();
+                    cardsRow.add(buildPriceCard(newNormalName, newNormalDuration, newNormalPrice, false));
+                    cardsRow.add(buildPriceCard(newMajorName, newMajorDuration, newMajorPrice, false));
+                    cardsRow.revalidate();
+                    cardsRow.repaint();
+
+                    panel.remove(actionRow);
+                    panel.revalidate();
+                    panel.repaint();
+
+                } catch (NumberFormatException ex) {
+                    showThemedInfo("Please enter valid price numbers.");
+                }
+            });
+
+            actionRow.add(cancelBtn);
+            actionRow.add(saveBtn);
+            panel.add(actionRow, BorderLayout.SOUTH);
+            panel.revalidate();
+            panel.repaint();
+        });
+
         return panel;
     }
 
-    private JPanel buildPriceCard(String serviceName, String duration, double price) {
+    private JPanel buildPriceCard(String serviceName, String duration, double price, boolean editable) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(BG_CARD);
@@ -665,28 +780,84 @@ public class ManagerDashboard extends JFrame {
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
             new EmptyBorder(24, 24, 24, 24)
         ));
-        card.setMaximumSize(new Dimension(260, 160));
+        card.setMaximumSize(new Dimension(260, 220));
 
-        JLabel name = new JLabel(serviceName);
-        name.setFont(new Font("SansSerif", Font.BOLD, 16));
-        name.setForeground(TEXT_PRIMARY);
-        name.setAlignmentX(Component.LEFT_ALIGNMENT);
+        if (editable) {
+            // Service Name (editable)
+            JTextField nameField = new JTextField(serviceName, 18);
+            nameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+            nameField.setBackground(BG_CARD2);
+            nameField.setForeground(TEXT_PRIMARY);
+            nameField.setFont(new Font("SansSerif", Font.BOLD, 14));
+            nameField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR),
+                new EmptyBorder(6, 8, 6, 8)
+            ));
+            nameField.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(nameField);
+            card.add(Box.createVerticalStrut(8));
 
-        JLabel dur = new JLabel("Duration: " + duration);
-        dur.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        dur.setForeground(TEXT_MUTED);
-        dur.setAlignmentX(Component.LEFT_ALIGNMENT);
+            // Duration (editable)
+            JTextField durationField = new JTextField(duration, 15);
+            durationField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            durationField.setBackground(BG_CARD2);
+            durationField.setForeground(TEXT_PRIMARY);
+            durationField.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            durationField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR),
+                new EmptyBorder(4, 8, 4, 8)
+            ));
+            durationField.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(durationField);
+            card.add(Box.createVerticalStrut(12));
 
-        JLabel priceLbl = new JLabel(String.format("RM %.2f", price));
-        priceLbl.setFont(new Font("SansSerif", Font.BOLD, 28));
-        priceLbl.setForeground(ACCENT);
-        priceLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            // Price (editable)
+            JPanel priceInputPanel = new JPanel(new BorderLayout(8, 0));
+            priceInputPanel.setOpaque(false);
+            priceInputPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        card.add(name);
-        card.add(Box.createVerticalStrut(6));
-        card.add(dur);
-        card.add(Box.createVerticalStrut(16));
-        card.add(priceLbl);
+            JLabel rmLabel = new JLabel("Price (RM):");
+            rmLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+            rmLabel.setForeground(TEXT_MUTED);
+
+            JTextField priceField = new JTextField(String.format("%.2f", price), 12);
+            priceField.setMaximumSize(new Dimension(100, 28));
+            priceField.setBackground(BG_CARD2);
+            priceField.setForeground(ACCENT);
+            priceField.setFont(new Font("SansSerif", Font.BOLD, 14));
+            priceField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR),
+                new EmptyBorder(6, 8, 6, 8)
+            ));
+
+            priceInputPanel.add(rmLabel, BorderLayout.WEST);
+            priceInputPanel.add(priceField, BorderLayout.CENTER);
+
+            card.add(priceInputPanel);
+        } else {
+            // View Mode
+            JLabel name = new JLabel(serviceName);
+            name.setFont(new Font("SansSerif", Font.BOLD, 16));
+            name.setForeground(TEXT_PRIMARY);
+            name.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JLabel dur = new JLabel("Duration: " + duration);
+            dur.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            dur.setForeground(TEXT_MUTED);
+            dur.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JLabel priceLbl = new JLabel(String.format("RM %.2f", price));
+            priceLbl.setFont(new Font("SansSerif", Font.BOLD, 28));
+            priceLbl.setForeground(ACCENT);
+            priceLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            card.add(name);
+            card.add(Box.createVerticalStrut(6));
+            card.add(dur);
+            card.add(Box.createVerticalStrut(16));
+            card.add(priceLbl);
+        }
+
         return card;
     }
 

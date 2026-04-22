@@ -411,4 +411,40 @@ public class FileHandler {
             System.err.println("Error writing services: " + e.getMessage());
         }
     }
+
+    /**
+     * Updates service title, price, and duration for a service type.
+     * This is used by the Manager to update all service details at once.
+     * Format: ServiceType|Price|Duration
+     */
+    public static void updateService(String serviceType, double newPrice, String newDuration) {
+        List<String> lines = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(SERVICES_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] p = line.split("\\|");
+                if (p.length >= 2 && p[0].equalsIgnoreCase(serviceType)) {
+                    // Update price and duration, keep service type as key
+                    // Parse duration to extract just the number (e.g., "1 hour" -> 1)
+                    String durationNumber = newDuration.replaceAll("[^0-9]", "");
+                    if (durationNumber.isEmpty()) {
+                        durationNumber = "1";  // default
+                    }
+                    line = p[0] + "|" + String.format("%.2f", newPrice) + "|" + durationNumber;
+                }
+                lines.add(line);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading services: " + e.getMessage());
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(SERVICES_FILE))) {
+            for (String l : lines) {
+                writer.write(l);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing services: " + e.getMessage());
+        }
+    }
 }

@@ -1,0 +1,5 @@
+A001|C001|Fantastic service! The staff were courteous and the facility was clean. Definitely will return.
+A002|C002|Best automotive service center I've been to. Fast, reliable, and affordable!
+A004|C004|Very happy with the service. The team was responsive to my queries. Highly satisfied!
+A005|C005|Great experience overall. The waiting area was comfortable and service was quick. Thank you!
+A007|C002|Excellent customer service and quality work. Will recommend to my friends and family.

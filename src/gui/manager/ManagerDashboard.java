@@ -739,9 +739,9 @@ public class ManagerDashboard extends JFrame {
                         return;
                     }
 
-                    // Update services
-                    FileHandler.updateServicePrice("Normal", newNormalPrice);
-                    FileHandler.updateServicePrice("Major", newMajorPrice);
+                    // Update services with title, price, and duration
+                    FileHandler.updateService("Normal", newNormalPrice, newNormalDuration);
+                    FileHandler.updateService("Major", newMajorPrice, newMajorDuration);
 
                     showThemedInfo("Services updated successfully!");
 
@@ -873,32 +873,288 @@ public class ManagerDashboard extends JFrame {
         heading.setFont(new Font("SansSerif", Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
 
-        String[] columns = {"Appointment ID", "Type", "From", "Content"};
+        // Table with richer columns
+        String[] columns = {"Apt ID", "Type", "From", "Status", "Service", "Content", "Date"};
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
-        // Load feedbacks (from technicians)
-        FileHandler.loadAllFeedbacks().forEach(f ->
+        // Load all necessary data
+        var appointments = FileHandler.loadAllAppointments();
+        var feedbacks = FileHandler.loadAllFeedbacks();
+        var comments = FileHandler.loadAllComments();
+
+        // Create a map for quick lookup
+        var appointmentMap = new java.util.HashMap<String, model.Appointment>();
+        appointments.forEach(a -> appointmentMap.put(a.getAppointmentID(), a));
+
+        // Load feedbacks (from technicians) with enriched data
+        feedbacks.forEach(f -> {
+            model.Appointment apt = appointmentMap.get(f.getAppointmentID());
+            String status = apt != null ? apt.getStatus() : "Unknown";
+            String service = apt != null ? apt.getServiceType() : "Unknown";
+            String date = apt != null ? apt.getDate() : "N/A";
+            
             model.addRow(new Object[]{
-                f.getAppointmentID(), "Technician Feedback", f.getTechnicianID(), f.getFeedbackText()
-            })
-        );
-        // Load comments (from customers)
-        FileHandler.loadAllComments().forEach(c ->
+                f.getAppointmentID(),
+                "Feedback",
+                f.getTechnicianID(),
+                status,
+                service,
+                f.getFeedbackText(),
+                date
+            });
+        });
+
+        // Load comments (from customers) with enriched data
+        comments.forEach(c -> {
+            model.Appointment apt = appointmentMap.get(c.getAppointmentID());
+            String status = apt != null ? apt.getStatus() : "Unknown";
+            String service = apt != null ? apt.getServiceType() : "Unknown";
+            String date = apt != null ? apt.getDate() : "N/A";
+            
             model.addRow(new Object[]{
-                c.getAppointmentID(), "Customer Comment", c.getCustomerID(), c.getCommentText()
-            })
-        );
+                c.getAppointmentID(),
+                "Comment",
+                c.getCustomerID(),
+                status,
+                service,
+                c.getCommentText(),
+                date
+            });
+        });
 
         JTable table = makeStyledTable(model);
-        table.getColumnModel().getColumn(3).setPreferredWidth(300); // wider content column
+        table.getColumnModel().getColumn(5).setPreferredWidth(300);
+        table.getColumnModel().getColumn(0).setPreferredWidth(60);
+        table.getColumnModel().getColumn(1).setPreferredWidth(80);
+        table.getColumnModel().getColumn(2).setPreferredWidth(80);
 
-        panel.add(heading,            BorderLayout.NORTH);
-        panel.add(makeScrollPane(table), BorderLayout.CENTER);
+        // Setup row sorter with filtering capability
+        javax.swing.table.TableRowSorter<DefaultTableModel> sorter = new javax.swing.table.TableRowSorter<>(model);
+        table.setRowSorter(sorter);
+
+        // Add double-click listener to view full content
+        table.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = table.convertRowIndexToModel(table.rowAtPoint(e.getPoint()));
+                    if (row >= 0) {
+                        String content = (String) model.getValueAt(row, 5);
+                        String type = (String) model.getValueAt(row, 1);
+                        String from = (String) model.getValueAt(row, 2);
+                        showThemedInfo("<b>" + type + " from " + from + ":</b><br><br>" + content);
+                    }
+                }
+            }
+        });
+
+        // Build toolbar with filters and search
+        JPanel toolbar = buildFeedbacksToolbar(model, sorter, table);
+        
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false);
+        centerPanel.add(toolbar,           BorderLayout.NORTH);
+        centerPanel.add(makeScrollPane(table), BorderLayout.CENTER);
+
+        panel.add(heading,       BorderLayout.NORTH);
+        panel.add(centerPanel,   BorderLayout.CENTER);
         return panel;
     }
 
+    /**
+     * Builds the toolbar for feedback filtering and search
+     */
+    private JPanel buildFeedbacksToolbar(DefaultTableModel model, javax.swing.table.TableRowSorter<DefaultTableModel> sorter, JTable table) {
+        JPanel toolbar = new JPanel(new BorderLayout(12, 0));
+        toolbar.setBackground(BG_CARD);
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 1, 0, BORDER_COLOR),
+            new EmptyBorder(12, 16, 12, 16)
+        ));
+
+        // State variables for filter
+        final String[] currentFilter = {"ALL"};
+
+        // Left side: Filter buttons
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        filterPanel.setOpaque(false);
+
+        JLabel filterLabel = new JLabel("Filter:");
+        filterLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        filterLabel.setForeground(TEXT_MUTED);
+        filterPanel.add(filterLabel);
+
+        JButton allBtn = new JButton("All") {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isArmed()) {
+                    g2.setColor(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 40));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                }
+                super.paintComponent(g);
+            }
+        };
+        allBtn.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        allBtn.setForeground(ACCENT);
+        allBtn.setBackground(new Color(0, 0, 0, 0));
+        allBtn.setOpaque(false);
+        allBtn.setBorderPainted(false);
+        allBtn.setFocusPainted(false);
+        allBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        JButton feedbackBtn = new JButton("Feedbacks") {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isArmed()) {
+                    g2.setColor(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 40));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                }
+                super.paintComponent(g);
+            }
+        };
+        feedbackBtn.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        feedbackBtn.setForeground(TEXT_MUTED);
+        feedbackBtn.setBackground(new Color(0, 0, 0, 0));
+        feedbackBtn.setOpaque(false);
+        feedbackBtn.setBorderPainted(false);
+        feedbackBtn.setFocusPainted(false);
+        feedbackBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        JButton commentBtn = new JButton("Comments") {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isArmed()) {
+                    g2.setColor(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 40));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                }
+                super.paintComponent(g);
+            }
+        };
+        commentBtn.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        commentBtn.setForeground(TEXT_MUTED);
+        commentBtn.setBackground(new Color(0, 0, 0, 0));
+        commentBtn.setOpaque(false);
+        commentBtn.setBorderPainted(false);
+        commentBtn.setFocusPainted(false);
+        commentBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Add filter button listeners
+        allBtn.addActionListener(e -> {
+            currentFilter[0] = "ALL";
+            allBtn.setForeground(ACCENT);
+            feedbackBtn.setForeground(TEXT_MUTED);
+            commentBtn.setForeground(TEXT_MUTED);
+            applyFeedbackFilters(sorter, model, currentFilter[0], "");
+        });
+
+        feedbackBtn.addActionListener(e -> {
+            currentFilter[0] = "Feedback";
+            allBtn.setForeground(TEXT_MUTED);
+            feedbackBtn.setForeground(ACCENT);
+            commentBtn.setForeground(TEXT_MUTED);
+            applyFeedbackFilters(sorter, model, currentFilter[0], "");
+        });
+
+        commentBtn.addActionListener(e -> {
+            currentFilter[0] = "Comment";
+            allBtn.setForeground(TEXT_MUTED);
+            feedbackBtn.setForeground(TEXT_MUTED);
+            commentBtn.setForeground(ACCENT);
+            applyFeedbackFilters(sorter, model, currentFilter[0], "");
+        });
+
+        filterPanel.add(allBtn);
+        filterPanel.add(feedbackBtn);
+        filterPanel.add(commentBtn);
+
+        // Right side: Search box
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        searchPanel.setOpaque(false);
+
+        JTextField searchField = new JTextField();
+        searchField.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        searchField.setForeground(TEXT_PRIMARY);
+        searchField.setBackground(BG_DARK);
+        searchField.setCaretColor(ACCENT);
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(6, 10, 6, 10)
+        ));
+        searchField.setPreferredSize(new Dimension(200, 32));
+        searchField.setText("Search by ID or content...");
+        searchField.setForeground(TEXT_MUTED);
+
+        searchField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(FocusEvent evt) {
+                if (searchField.getText().equals("Search by ID or content...")) {
+                    searchField.setText("");
+                    searchField.setForeground(TEXT_PRIMARY);
+                }
+            }
+            public void focusLost(FocusEvent evt) {
+                if (searchField.getText().isEmpty()) {
+                    searchField.setText("Search by ID or content...");
+                    searchField.setForeground(TEXT_MUTED);
+                }
+            }
+        });
+
+        // Add search field listener
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { updateSearch(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { updateSearch(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateSearch(); }
+            
+            private void updateSearch() {
+                String searchText = searchField.getText();
+                if (searchText.equals("Search by ID or content...") || searchText.isEmpty()) {
+                    applyFeedbackFilters(sorter, model, currentFilter[0], "");
+                } else {
+                    applyFeedbackFilters(sorter, model, currentFilter[0], searchText);
+                }
+            }
+        });
+
+        searchPanel.add(searchField);
+
+        toolbar.add(filterPanel,  BorderLayout.WEST);
+        toolbar.add(searchPanel,  BorderLayout.EAST);
+
+        return toolbar;
+    }
+
+    /**
+     * Helper method to apply filters to the feedback table
+     */
+    private void applyFeedbackFilters(javax.swing.table.TableRowSorter<DefaultTableModel> sorter, 
+                                      DefaultTableModel model, String typeFilter, String searchText) {
+        java.util.List<javax.swing.RowFilter<Object, Object>> filters = new java.util.ArrayList<>();
+
+        // Type filter (Feedback/Comment/All)
+        if (!typeFilter.equals("ALL")) {
+            filters.add(javax.swing.RowFilter.regexFilter("^" + typeFilter + "$", 1));
+        }
+
+        // Search filter (Appointment ID or Content)
+        if (!searchText.isEmpty()) {
+            java.util.List<javax.swing.RowFilter<Object, Object>> searchFilters = new java.util.ArrayList<>();
+            searchFilters.add(javax.swing.RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(searchText), 0)); // Apt ID
+            searchFilters.add(javax.swing.RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(searchText), 5)); // Content
+            filters.add(javax.swing.RowFilter.orFilter(searchFilters));
+        }
+
+        if (filters.isEmpty()) {
+            sorter.setRowFilter(null);
+        } else if (filters.size() == 1) {
+            sorter.setRowFilter(filters.get(0));
+        } else {
+            sorter.setRowFilter(javax.swing.RowFilter.andFilter(filters));
+        }
+    }
 
     //  PANEL 4 — REPORTS
     //  TODO (Member 2): Show summary stats — revenue, count by type, etc.

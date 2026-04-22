@@ -123,6 +123,85 @@ public class FileHandler {
         return String.format("U%03d", max + 1);  // e.g. "U005"
     }
 
+    /**
+     * Updates a user's profile in users.txt.
+     * Finds the user by userID and updates first name, last name, email, phone, and password.
+     * Returns true if successful, false if user not found or error occurs.
+     */
+    public static boolean updateUserProfile(User user) {
+        List<User> users = loadAllUsers();
+        boolean found = false;
+        
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).getUserID().equals(user.getUserID())) {
+                // Update the user object at this position
+                users.set(i, user);
+                found = true;
+                break;
+            }
+        }
+        
+        if (found) {
+            saveAllUsers(users);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Updates a customer's profile in customers.txt.
+     * Finds the customer by userId and updates first name, last name, email, and phone.
+     * Returns true if successful, false if customer not found or error occurs.
+     * Format: customerId|firstName|lastName|email|phone|userId
+     */
+    public static boolean updateCustomerProfile(Customer customer) {
+        List<String> lines = new ArrayList<>();
+        boolean found = false;
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(CUSTOMERS_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    lines.add("");
+                    continue;
+                }
+                
+                String[] parts = line.split("\\|");
+                if (parts.length >= 6 && parts[5].equals(customer.getUserID())) {
+                    // Found the matching customer — rebuild the line with updated values
+                    // Format: customerId|firstName|lastName|email|phone|userId
+                    String updatedLine = parts[0] + "|" + customer.getFirstName() + "|" 
+                                       + customer.getLastName() + "|" + customer.getEmail() 
+                                       + "|" + customer.getPhone() + "|" + customer.getUserID();
+                    lines.add(updatedLine);
+                    found = true;
+                } else {
+                    lines.add(line);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading customers file: " + e.getMessage());
+            return false;
+        }
+        
+        if (found) {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(CUSTOMERS_FILE))) {
+                for (String l : lines) {
+                    if (!l.isEmpty()) {
+                        writer.write(l);
+                        writer.newLine();
+                    }
+                }
+            } catch (IOException e) {
+                System.err.println("Error writing customers file: " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
     //  APPOINTMENTS
     public static List<Appointment> loadAllAppointments() {
         List<Appointment> list = new ArrayList<>();

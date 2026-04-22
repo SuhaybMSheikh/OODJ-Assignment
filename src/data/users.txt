@@ -1,4 +1,4 @@
 U001|admin|admin123|Manager|Sam|Maxwell|sam@apu.edu.my|0123456789
-U002|staff1|staff123|CounterStaff|Sarah|Lim|sarah@apu.edu.my|0112233445
+U002|Staff1|qwertyuiop123|CounterStaff|Sarah|Lim|sarah@apu.edu.my|0145761234
 U003|tech1|tech123|Technician|Ahmad|Razak|ahmad@apu.edu.my|0198765432
-U004|cust1|cust123|Customer|John|Tan|john@email.com|0167654321
+U004|cust1|cust123|Customer|John|Tan|john@email.com|0123073317

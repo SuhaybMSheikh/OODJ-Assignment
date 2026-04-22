@@ -45,6 +45,12 @@ public class CustomerDashboard extends JFrame {
     private CardLayout contentLayout;
     private JPanel     contentPanel;
 
+    // PROFILE PANEL COMPONENTS (for refreshing after edit)
+    private JLabel fullNameLabel;
+    private JLabel emailLabel;
+    private JLabel phoneLabel;
+    private JLabel userLabel;
+
     // CONSTRUCTOR
     public CustomerDashboard(Customer customer) {
         this.currentCustomer = customer;
@@ -84,9 +90,9 @@ public class CustomerDashboard extends JFrame {
         JPanel rightSide = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
         rightSide.setOpaque(false);
 
-        JLabel userLbl = new JLabel("🚗  " + currentCustomer.getFullName() + "  ·  Customer");
-        userLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        userLbl.setForeground(TEXT_MUTED);
+        userLabel = new JLabel("🚗  " + currentCustomer.getFullName() + "  ·  Customer");
+        userLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        userLabel.setForeground(TEXT_MUTED);
 
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -101,7 +107,7 @@ public class CustomerDashboard extends JFrame {
             new main.LoginFrame().setVisible(true);
         });
 
-        rightSide.add(userLbl);
+        rightSide.add(userLabel);
         rightSide.add(logoutBtn);
         bar.add(title,     BorderLayout.WEST);
         bar.add(rightSide, BorderLayout.EAST);
@@ -168,24 +174,26 @@ public class CustomerDashboard extends JFrame {
             new EmptyBorder(28, 28, 28, 28)
         ));
 
-        card.add(makeInfoRow("Full Name",  currentCustomer.getFullName()));
+        // Initialize labels for refreshing
+        fullNameLabel = new JLabel();
+        emailLabel = new JLabel();
+        phoneLabel = new JLabel();
+
+        card.add(makeEditableInfoRow("Full Name",  currentCustomer.getFullName(), fullNameLabel));
         card.add(Box.createVerticalStrut(12));
         card.add(makeInfoRow("Username",   currentCustomer.getUsername()));
         card.add(Box.createVerticalStrut(12));
-        card.add(makeInfoRow("Email",      currentCustomer.getEmail()));
+        card.add(makeEditableInfoRow("Email",      currentCustomer.getEmail(), emailLabel));
         card.add(Box.createVerticalStrut(12));
-        card.add(makeInfoRow("Phone",      currentCustomer.getPhone()));
+        card.add(makeEditableInfoRow("Phone",      currentCustomer.getPhone(), phoneLabel));
         card.add(Box.createVerticalStrut(24));
 
         JButton editBtn = makePrimaryButton("✏  Edit Profile");
         editBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        editBtn.addActionListener(e ->
-            JOptionPane.showMessageDialog(this,
-                "TODO (Member 1): Open edit profile dialog.\n" +
-                "Fields: first name, last name, email, phone, password.\n" +
-                "Save changes to users.txt via FileHandler.saveAllUsers().",
-                "Edit Profile", JOptionPane.INFORMATION_MESSAGE)
-        );
+        editBtn.addActionListener(e -> {
+            JDialog editDialog = buildEditProfileDialog();
+            editDialog.setVisible(true);
+        });
         card.add(editBtn);
 
         panel.add(heading, BorderLayout.NORTH);
@@ -378,6 +386,225 @@ public class CustomerDashboard extends JFrame {
     }
 
 
+    //  EDIT PROFILE DIALOG
+    private JDialog buildEditProfileDialog() {
+        JDialog dialog = new JDialog(this, "Edit Profile", true);
+        dialog.setSize(400, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_CARD);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        // First Name
+        JLabel firstNameLbl = new JLabel("First Name:");
+        firstNameLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        firstNameLbl.setForeground(TEXT_MUTED);
+        firstNameLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JTextField firstNameField = new JTextField(currentCustomer.getFirstName());
+        firstNameField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        firstNameField.setBackground(BG_CARD2);
+        firstNameField.setForeground(TEXT_PRIMARY);
+        firstNameField.setCaretColor(TEXT_PRIMARY);
+        firstNameField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(8, 12, 8, 12)
+        ));
+        firstNameField.setMaximumSize(new Dimension(300, 36));
+        firstNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Last Name
+        JLabel lastNameLbl = new JLabel("Last Name:");
+        lastNameLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        lastNameLbl.setForeground(TEXT_MUTED);
+        lastNameLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JTextField lastNameField = new JTextField(currentCustomer.getLastName());
+        lastNameField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        lastNameField.setBackground(BG_CARD2);
+        lastNameField.setForeground(TEXT_PRIMARY);
+        lastNameField.setCaretColor(TEXT_PRIMARY);
+        lastNameField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(8, 12, 8, 12)
+        ));
+        lastNameField.setMaximumSize(new Dimension(300, 36));
+        lastNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Email
+        JLabel emailLbl = new JLabel("Email:");
+        emailLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        emailLbl.setForeground(TEXT_MUTED);
+        emailLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JTextField emailField = new JTextField(currentCustomer.getEmail());
+        emailField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        emailField.setBackground(BG_CARD2);
+        emailField.setForeground(TEXT_PRIMARY);
+        emailField.setCaretColor(TEXT_PRIMARY);
+        emailField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(8, 12, 8, 12)
+        ));
+        emailField.setMaximumSize(new Dimension(300, 36));
+        emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Phone
+        JLabel phoneLbl = new JLabel("Phone:");
+        phoneLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        phoneLbl.setForeground(TEXT_MUTED);
+        phoneLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JTextField phoneField = new JTextField(currentCustomer.getPhone());
+        phoneField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        phoneField.setBackground(BG_CARD2);
+        phoneField.setForeground(TEXT_PRIMARY);
+        phoneField.setCaretColor(TEXT_PRIMARY);
+        phoneField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(8, 12, 8, 12)
+        ));
+        phoneField.setMaximumSize(new Dimension(300, 36));
+        phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Password
+        JLabel passwordLbl = new JLabel("Password:");
+        passwordLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        passwordLbl.setForeground(TEXT_MUTED);
+        passwordLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPasswordField passwordField = new JPasswordField(currentCustomer.getPassword());
+        passwordField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        passwordField.setBackground(BG_CARD2);
+        passwordField.setForeground(TEXT_PRIMARY);
+        passwordField.setCaretColor(TEXT_PRIMARY);
+        passwordField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(8, 12, 8, 12)
+        ));
+        passwordField.setMaximumSize(new Dimension(300, 36));
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Error label
+        JLabel errorLabel = new JLabel(" ");
+        errorLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        errorLabel.setForeground(DANGER);
+        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+
+        JButton cancelBtn = new JButton("Cancel");
+        cancelBtn.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        cancelBtn.setForeground(TEXT_MUTED);
+        cancelBtn.setBackground(new Color(0,0,0,0));
+        cancelBtn.setOpaque(false);
+        cancelBtn.setBorderPainted(false);
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        JButton saveBtn = makePrimaryButton("Save Changes");
+        saveBtn.addActionListener(e -> {
+            String firstName = firstNameField.getText().trim();
+            String lastName = lastNameField.getText().trim();
+            String email = emailField.getText().trim();
+            String phone = phoneField.getText().trim();
+            String password = new String(passwordField.getPassword()).trim();
+
+            // VALIDATION
+            if (firstName.isEmpty()) {
+                errorLabel.setText("First name cannot be empty.");
+                return;
+            }
+            if (lastName.isEmpty()) {
+                errorLabel.setText("Last name cannot be empty.");
+                return;
+            }
+            if (email.isEmpty()) {
+                errorLabel.setText("Email cannot be empty.");
+                return;
+            }
+            if (!email.contains("@")) {
+                errorLabel.setText("Invalid email format.");
+                return;
+            }
+            if (phone.isEmpty()) {
+                errorLabel.setText("Phone cannot be empty.");
+                return;
+            }
+            if (password.isEmpty()) {
+                errorLabel.setText("Password cannot be empty.");
+                return;
+            }
+            if (password.length() < 6) {
+                errorLabel.setText("Password must be at least 6 characters.");
+                return;
+            }
+
+            // UPDATE CUSTOMER OBJECT
+            currentCustomer.setFirstName(firstName);
+            currentCustomer.setLastName(lastName);
+            currentCustomer.setEmail(email);
+            currentCustomer.setPhone(phone);
+            currentCustomer.setPassword(password);
+
+            // SAVE TO users.txt
+            boolean usersSaved = FileHandler.updateUserProfile(currentCustomer);
+            
+            // SAVE TO customers.txt
+            boolean customersSaved = FileHandler.updateCustomerProfile(currentCustomer);
+
+            if (usersSaved && customersSaved) {
+                // Update UI labels to reflect changes
+                fullNameLabel.setText(currentCustomer.getFullName());
+                emailLabel.setText(email);
+                phoneLabel.setText(phone);
+                userLabel.setText("🚗  " + currentCustomer.getFullName() + "  ·  Customer");
+
+                JOptionPane.showMessageDialog(dialog, 
+                    "Profile updated successfully!", 
+                    "Success", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+            } else {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Error saving profile. Please try again.", 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+
+        panel.add(firstNameLbl);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(firstNameField);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(lastNameLbl);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(lastNameField);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(emailLbl);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(emailField);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(phoneLbl);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(phoneField);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(passwordLbl);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(passwordField);
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(errorLabel);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(buttonPanel);
+
+        dialog.add(panel);
+        return dialog;
+    }
+
+
     //  SHARED HELPERS
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
@@ -392,6 +619,22 @@ public class CustomerDashboard extends JFrame {
         val.setForeground(TEXT_PRIMARY);
         row.add(lbl, BorderLayout.WEST);
         row.add(val, BorderLayout.CENTER);
+        return row;
+    }
+
+    private JPanel makeEditableInfoRow(String label, String value, JLabel valueLabel) {
+        JPanel row = new JPanel(new BorderLayout(16, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JLabel lbl = new JLabel(label + ":");
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        lbl.setForeground(TEXT_MUTED);
+        lbl.setPreferredSize(new Dimension(100, 20));
+        valueLabel.setText(value);
+        valueLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        valueLabel.setForeground(TEXT_PRIMARY);
+        row.add(lbl, BorderLayout.WEST);
+        row.add(valueLabel, BorderLayout.CENTER);
         return row;
     }
 

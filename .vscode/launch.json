@@ -3,12 +3,23 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "main.Main",
+            "projectName": "OODJ-Assignment-1_d450c743"
+        },
+        {
+            "type": "java",
             "name": "Run APU-ASC",
             "request": "launch",
             "mainClass": "main.Main",
             "projectName": "APU_ASC",
-            "classPaths": ["${workspaceFolder}/bin"],
-            "sourcePaths": ["${workspaceFolder}/src"],
+            "classPaths": [
+                "${workspaceFolder}/bin"
+            ],
+            "sourcePaths": [
+                "${workspaceFolder}/src"
+            ],
             "cwd": "${workspaceFolder}"
         }
     ]

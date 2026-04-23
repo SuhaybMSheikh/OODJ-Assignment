@@ -1,17 +1,16 @@
 package gui.technician;
 
-import model.Technician;
-import model.Appointment;
-import model.Feedback;
-import util.FileHandler;
-import util.Session;
-
-import javax.swing.*;
-import javax.swing.border.*;
-import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
+import javax.swing.*;
+import javax.swing.border.*;
+import javax.swing.table.*;
+import model.Appointment;
+import model.Feedback;
+import model.Technician;
+import util.FileHandler;
+import util.Session;
 
 /**
  * GUI CLASS — TechnicianDashboard
@@ -306,20 +305,28 @@ public class TechnicianDashboard extends JFrame {
                 "Confirm", JOptionPane.YES_NO_OPTION);
             if (confirm != JOptionPane.YES_OPTION) return;
 
-            // TODO (Member 4): Update status in appointments.txt
-            // Steps:
-            //   1. FileHandler.loadAllAppointments()
-            //   2. Find the appointment with matching ID
-            //   3. appt.setStatus("Completed")
-            //   4. FileHandler.saveAllAppointments(list)
-            //   5. Refresh the table row
-
-            model.setValueAt("Completed", row, 4);  // update table display
-            completeBtn.setEnabled(false);
-            feedbackBtn.setEnabled(true);
-            JOptionPane.showMessageDialog(this,
-                "TODO (Member 4): Implement file update in appointments.txt",
-                "Completed", JOptionPane.INFORMATION_MESSAGE);
+            List<Appointment> appointments = FileHandler.loadAllAppointments();
+            boolean saved = false;
+            for (Appointment appt : appointments) {
+                if (appt.getAppointmentID().equals(apptID)) {
+                    appt.setStatus("Completed");
+                    saved = true;
+                    break;
+                }
+            }
+            if (saved) {
+                FileHandler.saveAllAppointments(appointments);
+                model.setValueAt("Completed", row, 4);  // update table display
+                completeBtn.setEnabled(false);
+                feedbackBtn.setEnabled(true);
+                JOptionPane.showMessageDialog(this,
+                    "Appointment " + apptID + " has been marked as Completed.",
+                    "Completed", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Unable to update appointment status. Please try again.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         // Write Feedback button action
@@ -356,15 +363,14 @@ public class TechnicianDashboard extends JFrame {
                 JOptionPane.showMessageDialog(this, "Feedback cannot be empty.");
                 return;
             }
-            // TODO (Member 4): Implement file write
-            // Steps:
-            //   1. Create new Feedback(apptID, currentTech.getUserID(), text)
-            //   2. List<Feedback> list = FileHandler.loadAllFeedbacks()
-            //   3. list.add(newFeedback)
-            //   4. FileHandler.saveAllFeedbacks(list)
+
+            Feedback newFeedback = new Feedback(apptID, currentTech.getUserID(), text);
+            List<Feedback> feedbacks = FileHandler.loadAllFeedbacks();
+            feedbacks.add(newFeedback);
+            FileHandler.saveAllFeedbacks(feedbacks);
+
             JOptionPane.showMessageDialog(this,
-                "TODO (Member 4): Save feedback to feedbacks.txt\n" +
-                "Text entered: " + text);
+                "Feedback saved successfully.");
         }
     }
 

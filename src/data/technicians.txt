@@ -1,3 +1,7 @@
 T001|U003|tech_alex|Alex|Wong
+<<<<<<< Updated upstream
 T002|U005|mike_tech|Mike|Johnson
 T003|U006|lisa_tech|Lisa|Su
+=======
+T003|U006|lisa_tech|Lisa|Chen
+>>>>>>> Stashed changes

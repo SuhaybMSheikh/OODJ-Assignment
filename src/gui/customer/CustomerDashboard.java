@@ -12,8 +12,14 @@ import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * GUI CLASS — CustomerDashboard
@@ -203,7 +209,7 @@ public class CustomerDashboard extends JFrame {
 
 
     //  PANEL 2 — SERVICE HISTORY
-    //  Shows this customer's past appointments + payment status + feedback
+    //  Shows this customer's past appointments + service fee + payment details
 
     private JPanel buildHistoryPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
@@ -214,55 +220,111 @@ public class CustomerDashboard extends JFrame {
         heading.setFont(new Font("SansSerif", Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
 
-        String[] cols = {"Appt ID", "Date", "Service Type", "Status", "Feedback", "Paid"};
+        String[] cols = {
+            "Appt ID", "Date", "Service Type", "Service Fee (RM)",
+            "Status", "Comments", "Payment Status"
+        };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
-        // Load appointments for THIS customer only
-        // TODO (Member 1): Cross-reference with customers.txt to get the customer ID
+        String resolvedCustomerID = resolveCustomerID();
+        if (resolvedCustomerID == null || resolvedCustomerID.isBlank()) {
+            JLabel warning = new JLabel(
+                "<html>Unable to load your history because your customer profile ID was not found.<br>" +
+                "Please contact counter staff for assistance.</html>"
+            );
+            warning.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            warning.setForeground(DANGER);
+            warning.setBorder(new EmptyBorder(20, 0, 0, 0));
+            panel.add(heading, BorderLayout.NORTH);
+            panel.add(warning, BorderLayout.CENTER);
+            return panel;
+        }
+
+        // Load appointments for THIS customer only (no hardcoded fallback).
         List<Appointment> myAppts = FileHandler.loadAllAppointments()
             .stream()
-            // Filter by customer ID — matches if the appointment's customerID
-            // links back to this user's customer record
-            .filter(a -> {
-                // Simple approach: check if the customer's username matches
-                // For a full implementation, join via customers.txt
-                return a.getCustomerID().equals(currentCustomer.getCustomerID())
-                    || a.getCustomerID().equals("C001"); // fallback for demo
-            })
+            .filter(a -> resolvedCustomerID.equals(a.getCustomerID()))
+            .sorted(Comparator.comparing(Appointment::getDate).reversed())
             .collect(java.util.stream.Collectors.toList());
 
-        // Load feedbacks and payments for lookup
+        // Build lookup maps once to avoid repeated scans for each row.
         List<Feedback> feedbacks = FileHandler.loadAllFeedbacks();
         List<model.Payment> payments = FileHandler.loadAllPayments();
+        Map<String, Double> serviceFees = FileHandler.loadAllServices();
+        Map<String, String> feedbackByAppointment = new HashMap<>();
+        Map<String, model.Payment> paymentByAppointment = new HashMap<>();
+
+        feedbacks.forEach(f -> feedbackByAppointment.putIfAbsent(
+            f.getAppointmentID(), f.getFeedbackText()
+        ));
+        payments.forEach(p -> paymentByAppointment.putIfAbsent(p.getAppointmentID(), p));
 
         myAppts.forEach(a -> {
-            // Find feedback for this appointment
-            String feedbackText = feedbacks.stream()
-                .filter(f -> f.getAppointmentID().equals(a.getAppointmentID()))
-                .map(f -> f.getFeedbackText())
-                .findFirst().orElse("No feedback yet");
+            String feedbackText = feedbackByAppointment.getOrDefault(
+                a.getAppointmentID(), "No feedback yet"
+            );
 
-            // Find payment for this appointment
-            String payStatus = payments.stream()
-                .filter(p -> p.getAppointmentID().equals(a.getAppointmentID()))
-                .map(p -> "Paid (RM " + String.format("%.2f", p.getAmount()) + ")")
-                .findFirst().orElse("Unpaid");
+            double fee = serviceFees.getOrDefault(a.getServiceType(), 0.0);
+            model.Payment payment = paymentByAppointment.get(a.getAppointmentID());
+            String payStatus = (payment == null)
+                ? "Unpaid"
+                : payment.getStatus() + " on " + payment.getDate();
 
             model.addRow(new Object[]{
-                a.getAppointmentID(), a.getDate(), a.getServiceType(),
-                a.getStatus(), feedbackText, payStatus
+                a.getAppointmentID(),
+                a.getDate(),
+                a.getServiceType(),
+                String.format("%.2f", fee),
+                a.getStatus(),
+                feedbackText,
+                payStatus
             });
         });
 
         JTable table = makeStyledTable(model);
-        table.getColumnModel().getColumn(4).setPreferredWidth(200); // wider feedback column
+        table.getColumnModel().getColumn(2).setPreferredWidth(110); // service type
+        table.getColumnModel().getColumn(3).setPreferredWidth(110); // service fee
+        table.getColumnModel().getColumn(5).setPreferredWidth(220); // comments
+        table.getColumnModel().getColumn(6).setPreferredWidth(170); // payment status
         JScrollPane scroll = makeScrollPane(table);
 
         panel.add(heading, BorderLayout.NORTH);
-        panel.add(scroll,  BorderLayout.CENTER);
+        if (myAppts.isEmpty()) {
+            JLabel empty = new JLabel("No service history found yet.");
+            empty.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            empty.setForeground(TEXT_MUTED);
+            empty.setHorizontalAlignment(SwingConstants.CENTER);
+            panel.add(empty, BorderLayout.CENTER);
+        } else {
+            panel.add(scroll, BorderLayout.CENTER);
+        }
         return panel;
+    }
+
+    private String resolveCustomerID() {
+        String existing = currentCustomer.getCustomerID();
+        if (existing != null && !existing.isBlank()) {
+            return existing;
+        }
+
+        String userID = currentCustomer.getUserID();
+        try (BufferedReader reader = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] parts = line.split("\\|");
+                if (parts.length >= 6 && parts[5].equals(userID)) {
+                    currentCustomer.setCustomerID(parts[0]);
+                    return parts[0];
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error resolving customer ID: " + e.getMessage());
+        }
+        return "";
     }
 
 
@@ -662,12 +724,24 @@ public class CustomerDashboard extends JFrame {
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> contentLayout.show(contentPanel, cardName));
+        btn.addActionListener(e -> {
+            if ("HISTORY".equals(cardName)) {
+                refreshHistoryPanel();
+            }
+            contentLayout.show(contentPanel, cardName);
+        });
         btn.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
             @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_MUTED);   }
         });
         return btn;
+    }
+
+    private void refreshHistoryPanel() {
+        contentPanel.remove(1); // index 1 is always HISTORY panel in buildContent
+        contentPanel.add(buildHistoryPanel(), "HISTORY", 1);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private JTable makeStyledTable(DefaultTableModel model) {

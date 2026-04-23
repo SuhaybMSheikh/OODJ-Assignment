@@ -1,5 +1,5 @@
-A001|T001|Great service! The technician was very professional and thorough. Will definitely come back.
-A002|T002|Excellent work on the major service. My car runs smoothly now. Highly recommended!
-A004|T003|The service was completed on time. Staff was friendly and helpful. Good value for money.
-A005|T002|Very satisfied with the work done. The technician explained everything clearly. Well done!
-A007|T001|Outstanding service quality. The team was efficient and polite. 5 stars!
+A001|T001|Engine oil and brake oil changed.
+A002|T002|Brake pads inspected and replaced due to wear.
+A003|T003|Battery tested and terminals cleaned for better connection.
+A004|T004|Tyre pressure adjusted and wheel alignment completed.
+A005|T005|Air filter cleaned and engine checked for smooth performance.

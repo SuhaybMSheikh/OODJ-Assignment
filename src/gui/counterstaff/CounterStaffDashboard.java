@@ -3,9 +3,11 @@ package gui.counterstaff;
 import model.Appointment;
 import model.CounterStaff;
 import model.Customer;
+import model.Payment;
 import model.User;
 import util.FileHandler;
 import util.Session;
+import java.time.LocalDate;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -1296,7 +1298,6 @@ public class CounterStaffDashboard extends JFrame {
     }
 
     // PANEL 4 — COLLECT PAYMENT
-    // TODO (Member 3): Process payment and generate receipt
     private JPanel buildPaymentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -1306,39 +1307,219 @@ public class CounterStaffDashboard extends JFrame {
         heading.setFont(new Font("SansSerif", Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
 
-        JLabel note = new JLabel(
-                "<html>TODO (Member 3): Show a list of Completed appointments<br>" +
-                        "that have NOT yet been paid. Let the staff select one,<br>" +
-                        "confirm the amount (from services.txt), and write to payments.txt.<br>" +
-                        "Then show a receipt popup (JDialog) with all details.</html>");
-        note.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        note.setForeground(TEXT_MUTED);
-        note.setBorder(new EmptyBorder(20, 0, 0, 0));
-
-        String[] cols = { "Payment ID", "Appointment ID", "Amount (RM)", "Date", "Status" };
+        String[] cols = { "Payment ID", "Appointment ID", "Customer Name", "Service Type", "Date", "Amount (RM)", "Status" };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) {
                 return false;
             }
         };
-        FileHandler.loadAllPayments().forEach(p -> model.addRow(new Object[] {
-                p.getPaymentID(), p.getAppointmentID(),
-                String.format("%.2f", p.getAmount()), p.getDate(), p.getStatus()
-        }));
+        refreshPaymentsTable(model);
 
         JTable table = makeStyledTable(model);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scroll = makeScrollPane(table);
 
         JButton payBtn = makePrimaryButton("💳  Collect & Generate Receipt");
-        payBtn.addActionListener(e -> JOptionPane.showMessageDialog(this,
-                "TODO (Member 3): Process payment for selected appointment.",
-                "Collect Payment", JOptionPane.INFORMATION_MESSAGE));
+        payBtn.setEnabled(false);
+
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = table.getSelectedRow();
+                if (row != -1) {
+                    String status = (String) table.getValueAt(row, 6);
+                    payBtn.setEnabled(!"Paid".equalsIgnoreCase(status));
+                } else {
+                    payBtn.setEnabled(false);
+                }
+            }
+        });
+
+        payBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row != -1) {
+                String apptID = (String) table.getValueAt(row, 1);
+                String customerName = (String) table.getValueAt(row, 2);
+                String serviceType = (String) table.getValueAt(row, 3);
+                double amount = FileHandler.getServicePrice(serviceType);
+                showCollectPaymentDialog(model, apptID, customerName, serviceType, amount);
+            }
+        });
 
         panel.add(heading, BorderLayout.NORTH);
         panel.add(scroll, BorderLayout.CENTER);
         panel.add(payBtn, BorderLayout.SOUTH);
         return panel;
+    }
+
+    /**
+     * Reloads the payments table from payments.txt and adds unpaid Completed appointments.
+     */
+    private void refreshPaymentsTable(DefaultTableModel model) {
+        model.setRowCount(0);
+
+        // Build customer name lookup from customers.txt
+        java.util.Map<String, String> custNames = new java.util.HashMap<>();
+        try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] p = line.split("\\|");
+                if (p.length >= 3) {
+                    custNames.put(p[0], p[1] + " " + p[2]);
+                }
+            }
+        } catch (IOException ex) {
+            System.err.println("Error reading customers.txt: " + ex.getMessage());
+        }
+
+        List<Appointment> allAppts = FileHandler.loadAllAppointments();
+        List<Payment> allPayments = FileHandler.loadAllPayments();
+
+        // 1. Load data from Payments
+        for (Payment p : allPayments) {
+            Appointment match = null;
+            for (Appointment a : allAppts) {
+                if (a.getAppointmentID().equals(p.getAppointmentID())) {
+                    match = a;
+                    break;
+                }
+            }
+            String cName = (match != null) ? custNames.getOrDefault(match.getCustomerID(), match.getCustomerID()) : "-";
+            String sType = (match != null) ? match.getServiceType() : "-";
+            model.addRow(new Object[] {
+                    p.getPaymentID(), p.getAppointmentID(), cName, sType,
+                    p.getDate(), String.format("%.2f", p.getAmount()), p.getStatus()
+            });
+        }
+
+        // 2. Load Completed (but not paid) appointments
+        for (Appointment a : allAppts) {
+            if ("Completed".equalsIgnoreCase(a.getStatus())) {
+                String cName = custNames.getOrDefault(a.getCustomerID(), a.getCustomerID());
+                double amt = FileHandler.getServicePrice(a.getServiceType());
+                model.addRow(new Object[] {
+                        "-", a.getAppointmentID(), cName, a.getServiceType(),
+                        a.getDate(), String.format("%.2f", amt), "Completed"
+                });
+            }
+        }
+    }
+
+    /**
+     * Shows a dialog to confirm payment collection.
+     */
+    private void showCollectPaymentDialog(DefaultTableModel model, String apptID, String customerName, String serviceType, double amount) {
+        JDialog dialog = new JDialog(this, "Collect Payment", true);
+        dialog.setSize(400, 350);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(BG_CARD);
+        content.setBorder(new EmptyBorder(24, 28, 24, 28));
+
+        JLabel titleLbl = new JLabel("Confirm Payment");
+        titleLbl.setFont(new Font("SansSerif", Font.BOLD, 18));
+        titleLbl.setForeground(TEXT_PRIMARY);
+        titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(titleLbl);
+        content.add(Box.createVerticalStrut(16));
+
+        content.add(makeInfoRow("Customer Name", customerName));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Appointment ID", apptID));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Service Type", serviceType));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Amount", String.format("RM %.2f", amount)));
+        content.add(Box.createVerticalStrut(24));
+
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        btnRow.setOpaque(false);
+        btnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton confirmBtn = makePrimaryButton("Confirm Payment");
+        JButton cancelBtn = makeSecondaryButton("Cancel");
+        btnRow.add(confirmBtn);
+        btnRow.add(cancelBtn);
+        content.add(btnRow);
+
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        confirmBtn.addActionListener(e -> {
+            String paymentID = FileHandler.generateNextPaymentID();
+            String date = LocalDate.now().toString();
+
+            // Create new Payment and save
+            Payment newPayment = new Payment(paymentID, apptID, amount, date, "Paid");
+            List<Payment> payments = FileHandler.loadAllPayments();
+            payments.add(newPayment);
+            FileHandler.saveAllPayments(payments);
+
+            // Update Appointment status to Paid
+            List<Appointment> appts = FileHandler.loadAllAppointments();
+            for (Appointment a : appts) {
+                if (a.getAppointmentID().equals(apptID)) {
+                    a.setStatus("Paid");
+                    break;
+                }
+            }
+            FileHandler.saveAllAppointments(appts);
+
+            refreshPaymentsTable(model);
+            dialog.dispose();
+
+            showReceiptDialog(paymentID, apptID, customerName, serviceType, date, amount);
+        });
+
+        dialog.setContentPane(content);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Shows the receipt after payment is confirmed.
+     */
+    private void showReceiptDialog(String paymentID, String apptID, String customerName, String serviceType, String date, double amount) {
+        JDialog dialog = new JDialog(this, "Receipt", true);
+        dialog.setSize(400, 380);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(BG_CARD);
+        content.setBorder(new EmptyBorder(24, 28, 24, 28));
+
+        JLabel titleLbl = new JLabel("Payment Receipt");
+        titleLbl.setFont(new Font("SansSerif", Font.BOLD, 22));
+        titleLbl.setForeground(ACCENT);
+        titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(titleLbl);
+        content.add(Box.createVerticalStrut(16));
+
+        content.add(makeInfoRow("Payment ID", paymentID));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Appointment ID", apptID));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Customer Name", customerName));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Service Type", serviceType));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Date", date));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeInfoRow("Amount", String.format("RM %.2f", amount)));
+        content.add(Box.createVerticalStrut(24));
+
+        JButton closeBtn = makeSecondaryButton("Close");
+        closeBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        closeBtn.addActionListener(e -> dialog.dispose());
+        content.add(closeBtn);
+
+        dialog.setContentPane(content);
+        dialog.setVisible(true);
     }
 
     // SHARED HELPERS

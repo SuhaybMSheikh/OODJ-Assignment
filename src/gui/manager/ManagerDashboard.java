@@ -366,6 +366,11 @@ public class ManagerDashboard extends JFrame {
             users.add(newUser);
             FileHandler.saveAllUsers(users);
 
+            // If a Technician is added, create a corresponding entry in technicians.txt
+            if ("Technician".equals(role)) {
+                FileHandler.addTechnicianMapping(newID, username, firstName, lastName);
+            }
+
             DefaultTableModel tableModel = (DefaultTableModel) ((JTable) ((JScrollPane) ((JPanel) contentPanel.getComponent(0)).getComponent(1)).getViewport().getComponent(0)).getModel();
             refreshUsersTable(tableModel);
 
@@ -564,8 +569,15 @@ public class ManagerDashboard extends JFrame {
         if (confirm != JOptionPane.YES_OPTION) return;
 
         List<User> users = FileHandler.loadAllUsers();
+        User userToDelete = users.stream().filter(u -> u.getUserID().equals(userID)).findFirst().orElse(null);
+        
         users.removeIf(u -> u.getUserID().equals(userID));
         FileHandler.saveAllUsers(users);
+
+        // If a Technician is deleted, also remove from technicians.txt
+        if (userToDelete != null && "Technician".equals(userToDelete.getRole())) {
+            FileHandler.removeTechnicianMapping(userID);
+        }
 
         refreshUsersTable(model);
         showThemedInfo("User deleted successfully!");

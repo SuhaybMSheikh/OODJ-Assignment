@@ -25,6 +25,7 @@ public class FileHandler {
     // These paths are relative to wherever you RUN the program from (the project root).
     private static final String USERS_FILE        = "src/data/users.txt";
     private static final String CUSTOMERS_FILE    = "src/data/customers.txt";
+    private static final String TECHNICIANS_FILE  = "src/data/technicians.txt";
     private static final String APPOINTMENTS_FILE = "src/data/appointments.txt";
     private static final String SERVICES_FILE     = "src/data/services.txt";
     private static final String PAYMENTS_FILE     = "src/data/payments.txt";
@@ -472,5 +473,150 @@ public class FileHandler {
             System.err.println("Error reading services: " + e.getMessage());
         }
         return services;
+    }
+
+    //  TECHNICIANS
+    /**
+     * Inner class to represent technician mapping data
+     * Format: T001|U003|tech_alex|Alex|Wong
+     */
+    public static class TechnicianMapping {
+        public String technicianID;  // e.g. T001
+        public String userID;        // e.g. U003
+        public String username;      // e.g. tech_alex
+        public String firstName;     // e.g. Alex
+        public String lastName;      // e.g. Wong
+
+        public TechnicianMapping(String techID, String userID, String username, String firstName, String lastName) {
+            this.technicianID = techID;
+            this.userID = userID;
+            this.username = username;
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    /**
+     * Loads all technicians from technicians.txt
+     * Returns a List of TechnicianMapping objects
+     * Format: T001|U003|tech_alex|Alex|Wong
+     */
+    public static List<TechnicianMapping> loadAllTechnicians() {
+        List<TechnicianMapping> technicians = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(TECHNICIANS_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] p = line.split("\\|");
+                if (p.length >= 5) {
+                    technicians.add(new TechnicianMapping(p[0], p[1], p[2], p[3], p[4]));
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading technicians: " + e.getMessage());
+        }
+        return technicians;
+    }
+
+    /**
+     * Gets the technician ID for a given user ID
+     * Returns the technician ID (e.g. "T001") or null if not found
+     */
+    public static String getTechnicianIDByUserID(String userID) {
+        for (TechnicianMapping tech : loadAllTechnicians()) {
+            if (tech.userID.equals(userID)) {
+                return tech.technicianID;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gets the user ID for a given technician ID
+     * Returns the user ID (e.g. "U003") or null if not found
+     */
+    public static String getUserIDByTechnicianID(String technicianID) {
+        for (TechnicianMapping tech : loadAllTechnicians()) {
+            if (tech.technicianID.equals(technicianID)) {
+                return tech.userID;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gets the technician name (first + last) for a given technician ID
+     * Returns "FirstName LastName" or null if not found
+     */
+    public static String getTechnicianNameByID(String technicianID) {
+        for (TechnicianMapping tech : loadAllTechnicians()) {
+            if (tech.technicianID.equals(technicianID)) {
+                return tech.firstName + " " + tech.lastName;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Generates the next available Technician ID (e.g. if T003 exists, returns T004).
+     */
+    public static String generateNextTechnicianID() {
+        List<TechnicianMapping> technicians = loadAllTechnicians();
+        int max = 0;
+        for (TechnicianMapping tech : technicians) {
+            try {
+                int num = Integer.parseInt(tech.technicianID.substring(1)); // strip the "T"
+                if (num > max) max = num;
+            } catch (NumberFormatException ignored) {}
+        }
+        return String.format("T%03d", max + 1);  // e.g. "T004"
+    }
+
+    /**
+     * Adds a new technician mapping to technicians.txt
+     * Called when a new Technician user is added
+     */
+    public static void addTechnicianMapping(String userID, String username, String firstName, String lastName) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TECHNICIANS_FILE, true))) {
+            String technicianID = generateNextTechnicianID();
+            String line = technicianID + "|" + userID + "|" + username + "|" + firstName + "|" + lastName;
+            writer.append(line);
+            writer.newLine();
+        } catch (IOException e) {
+            System.err.println("Error adding technician mapping: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Removes a technician mapping from technicians.txt based on user ID
+     * Called when a Technician user is deleted
+     */
+    public static void removeTechnicianMapping(String userID) {
+        List<String> lines = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(TECHNICIANS_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] parts = line.split("\\|");
+                // Keep only lines that don't match the userID we're removing
+                if (parts.length < 2 || !parts[1].equals(userID)) {
+                    lines.add(line);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading technicians file: " + e.getMessage());
+            return;
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TECHNICIANS_FILE))) {
+            for (String l : lines) {
+                writer.write(l);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error updating technicians file: " + e.getMessage());
+        }
     }
 }

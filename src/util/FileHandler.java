@@ -578,6 +578,10 @@ public class FileHandler {
      * Called when a new Technician user is added
      */
     public static void addTechnicianMapping(String userID, String username, String firstName, String lastName) {
+        if (getTechnicianIDByUserID(userID) != null) {
+            return;
+        }
+
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(TECHNICIANS_FILE, true))) {
             String technicianID = generateNextTechnicianID();
             String line = technicianID + "|" + userID + "|" + username + "|" + firstName + "|" + lastName;
@@ -594,14 +598,20 @@ public class FileHandler {
      */
     public static void removeTechnicianMapping(String userID) {
         List<String> lines = new ArrayList<>();
+        boolean removed = false;
         try (BufferedReader reader = new BufferedReader(new FileReader(TECHNICIANS_FILE))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty()) continue;
                 String[] parts = line.split("\\|");
-                // Keep only lines that don't match the userID we're removing
-                if (parts.length < 2 || !parts[1].equals(userID)) {
+                // Remove only the first matching mapping so one user delete only drops one technician row.
+                if (!removed && parts.length >= 2 && parts[1].equals(userID)) {
+                    removed = true;
+                    continue;
+                }
+
+                if (parts.length < 2 || !parts[1].equals(userID) || removed) {
                     lines.add(line);
                 }
             }

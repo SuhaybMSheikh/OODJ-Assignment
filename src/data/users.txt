@@ -1,4 +1,6 @@
-U001|admin|admin123|Manager|Sam|Maxwell|sam@apu.edu.my|0123456789
-U002|Staff1|qwertyuiop123|CounterStaff|Sarah|Lim|sarah@apu.edu.my|0145761234
-U003|tech1|tech123|Technician|Ahmad|Razak|ahmad@apu.edu.my|0198765432
-U004|cust1|cust123|Customer|John|Tan|john@email.com|0123073317
+U001|admin|admin123|Manager|Admin|Manager|admin@apu.edu.my|0123456789
+U002|john_staff|staff123|CounterStaff|John|Tan|john.tan@apu.edu.my|0112345678
+U003|tech_alex|tech123|Technician|Alex|Wong|alex.wong@apu.edu.my|0133456789
+U004|sarah_staff|staff456|CounterStaff|Sarah|Lee|sarah.kumar@apu.edu.my|0145678901
+U005|mike_tech|tech456|Technician|Mike|Johnson|mike.johnson@apu.edu.my|0156789012
+U006|lisa_tech|lisa123|Technician|Lisa|Su|lisasu@gmail.com|011334567

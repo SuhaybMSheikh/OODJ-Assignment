@@ -1,2 +1,2 @@
-Normal|50.00|1
-Major|150.00|3
+Normal|75.00|2
+Major|225.00|4

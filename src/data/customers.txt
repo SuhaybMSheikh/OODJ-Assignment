@@ -1,1 +1,5 @@
-C001|John|Tan|john@email.com|0123073317|U004
+C001|David|Lee|david.lee@gmail.com|0178901234|C001
+C002|Emma|Smith|emma.smith@gmail.com|0189012345|C002
+C003|Ravi|Patel|ravi.patel@gmail.com|0190123456|C003
+C004|Maya|Gonzalez|maya.gonzalez@gmail.com|0102345678|C004
+C005|James|Brown|james.brown@gmail.com|0103456789|C005

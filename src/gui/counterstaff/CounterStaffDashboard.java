@@ -1,6 +1,7 @@
 package gui.counterstaff;
 
 import model.CounterStaff;
+import model.Customer;
 import model.User;
 import util.FileHandler;
 import util.Session;
@@ -10,6 +11,8 @@ import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -18,31 +21,31 @@ import java.util.List;
  * MEMBER 3 is responsible for implementing all features in this file.
  *
  * FEATURES TO IMPLEMENT:
- *   [1] Edit own profile
- *   [2] Create / Read / Update / Delete customers
- *   [3] Create and assign new appointments
- *       - Normal service = 1 hour, Major service = 3 hours
- *       - Check technician availability (no time overlap)
- *   [4] Collect payment and generate receipt
+ * [1] Edit own profile
+ * [2] Create / Read / Update / Delete customers
+ * [3] Create and assign new appointments
+ * - Normal service = 1 hour, Major service = 3 hours
+ * - Check technician availability (no time overlap)
+ * [4] Collect payment and generate receipt
  */
 public class CounterStaffDashboard extends JFrame {
 
-    // COLOURS 
-    private static final Color BG_DARK      = new Color(15,  17,  26);
-    private static final Color BG_CARD      = new Color(24,  27,  42);
-    private static final Color BG_CARD2     = new Color(30,  34,  52);
-    private static final Color ACCENT       = new Color(20, 184, 166);
+    // COLOURS
+    private static final Color BG_DARK = new Color(15, 17, 26);
+    private static final Color BG_CARD = new Color(24, 27, 42);
+    private static final Color BG_CARD2 = new Color(30, 34, 52);
+    private static final Color ACCENT = new Color(20, 184, 166);
     private static final Color TEXT_PRIMARY = new Color(240, 241, 255);
-    private static final Color TEXT_MUTED   = new Color(148, 151, 180);
-    private static final Color BORDER_COLOR = new Color(55,  58,  80);
-    private static final Color DANGER       = new Color(239, 68,  68);
+    private static final Color TEXT_MUTED = new Color(148, 151, 180);
+    private static final Color BORDER_COLOR = new Color(55, 58, 80);
+    private static final Color DANGER = new Color(239, 68, 68);
 
     // STATE
     private CounterStaff currentStaff;
 
     // LAYOUT
     private CardLayout contentLayout;
-    private JPanel     contentPanel;
+    private JPanel contentPanel;
 
     // TOP BAR COMPONENT (stored for updating)
     private JLabel topBarUserLabel;
@@ -76,7 +79,7 @@ public class CounterStaffDashboard extends JFrame {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(BG_DARK);
 
-        root.add(buildTopBar(),  BorderLayout.NORTH);
+        root.add(buildTopBar(), BorderLayout.NORTH);
         root.add(buildSidebar(), BorderLayout.WEST);
         root.add(buildContent(), BorderLayout.CENTER);
 
@@ -88,9 +91,8 @@ public class CounterStaffDashboard extends JFrame {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG_CARD);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-            new EmptyBorder(14, 24, 14, 24)
-        ));
+                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+                new EmptyBorder(14, 24, 14, 24)));
 
         JLabel title = new JLabel("APU Automotive Service Centre");
         title.setFont(new Font("SansSerif", Font.BOLD, 16));
@@ -106,7 +108,7 @@ public class CounterStaffDashboard extends JFrame {
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.setFont(new Font("SansSerif", Font.PLAIN, 13));
         logoutBtn.setForeground(DANGER);
-        logoutBtn.setBackground(new Color(0,0,0,0));
+        logoutBtn.setBackground(new Color(0, 0, 0, 0));
         logoutBtn.setOpaque(false);
         logoutBtn.setBorderPainted(false);
         logoutBtn.setFocusPainted(false);
@@ -118,20 +120,19 @@ public class CounterStaffDashboard extends JFrame {
 
         rightSide.add(topBarUserLabel);
         rightSide.add(logoutBtn);
-        bar.add(title,     BorderLayout.WEST);
+        bar.add(title, BorderLayout.WEST);
         bar.add(rightSide, BorderLayout.EAST);
         return bar;
     }
 
-    //  SIDEBAR
+    // SIDEBAR
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(BG_CARD);
         sidebar.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
-            new EmptyBorder(24, 0, 24, 0)
-        ));
+                BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
+                new EmptyBorder(24, 0, 24, 0)));
         sidebar.setPreferredSize(new Dimension(220, 0));
 
         JLabel section = new JLabel("  COUNTER STAFF MENU");
@@ -141,33 +142,32 @@ public class CounterStaffDashboard extends JFrame {
         sidebar.add(section);
         sidebar.add(Box.createVerticalStrut(12));
 
-        sidebar.add(makeNavButton("👤  My Profile",       "PROFILE"));
-        sidebar.add(makeNavButton("💁‍♀️  Customers",       "CUSTOMERS"));
-        sidebar.add(makeNavButton("📅  Appointments",     "APPOINTMENTS"));
-        sidebar.add(makeNavButton("💳  Collect Payment",  "PAYMENTS"));
+        sidebar.add(makeNavButton("👤  My Profile", "PROFILE"));
+        sidebar.add(makeNavButton("💁‍♀️  Customers", "CUSTOMERS"));
+        sidebar.add(makeNavButton("📅  Appointments", "APPOINTMENTS"));
+        sidebar.add(makeNavButton("💳  Collect Payment", "PAYMENTS"));
 
         sidebar.add(Box.createVerticalGlue());
         return sidebar;
     }
 
-    //  CONTENT PANELS
+    // CONTENT PANELS
     private JPanel buildContent() {
         contentLayout = new CardLayout();
-        contentPanel  = new JPanel(contentLayout);
+        contentPanel = new JPanel(contentLayout);
         contentPanel.setBackground(BG_DARK);
 
-        contentPanel.add(buildProfilePanel(),      "PROFILE");
-        contentPanel.add(buildCustomersPanel(),    "CUSTOMERS");
+        contentPanel.add(buildProfilePanel(), "PROFILE");
+        contentPanel.add(buildCustomersPanel(), "CUSTOMERS");
         contentPanel.add(buildAppointmentsPanel(), "APPOINTMENTS");
-        contentPanel.add(buildPaymentsPanel(),     "PAYMENTS");
+        contentPanel.add(buildPaymentsPanel(), "PAYMENTS");
 
         contentLayout.show(contentPanel, "CUSTOMERS");
         return contentPanel;
     }
 
-
-    //  PANEL 1 — MY PROFILE
-    //  TODO (Member 3): Allow staff to edit their own details
+    // PANEL 1 — MY PROFILE
+    // TODO (Member 3): Allow staff to edit their own details
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -181,9 +181,8 @@ public class CounterStaffDashboard extends JFrame {
         profileCard.setLayout(new BoxLayout(profileCard, BoxLayout.Y_AXIS));
         profileCard.setBackground(BG_CARD);
         profileCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(28, 28, 28, 28)
-        ));
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(28, 28, 28, 28)));
         profileCard.setMaximumSize(new Dimension(500, Integer.MAX_VALUE));
         profileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -231,17 +230,17 @@ public class CounterStaffDashboard extends JFrame {
             fullNameLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
             fullNameLbl.setForeground(TEXT_MUTED);
             fullNameLbl.setPreferredSize(new Dimension(100, 20));
-            
+
             // Split into first and last name fields
             JPanel nameFieldsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
             nameFieldsPanel.setOpaque(false);
-            
+
             firstNameField = makeEditableTextField(currentStaff.getFirstName());
             lastNameField = makeEditableTextField(currentStaff.getLastName());
-            
+
             nameFieldsPanel.add(firstNameField);
             nameFieldsPanel.add(lastNameField);
-            
+
             fullNameRow.add(fullNameLbl, BorderLayout.WEST);
             fullNameRow.add(nameFieldsPanel, BorderLayout.CENTER);
             profileCard.add(fullNameRow);
@@ -297,13 +296,13 @@ public class CounterStaffDashboard extends JFrame {
             passwordLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
             passwordLbl.setForeground(TEXT_MUTED);
             passwordLbl.setPreferredSize(new Dimension(100, 20));
-            
+
             passwordField = makeEditableTextField(maskPassword(currentStaff.getPassword()));
-            
+
             JPanel passwordFieldPanel = new JPanel(new BorderLayout(8, 0));
             passwordFieldPanel.setOpaque(false);
             passwordFieldPanel.add(passwordField, BorderLayout.CENTER);
-            
+
             JButton eyeToggle = new JButton("👁");
             eyeToggle.setFont(new Font("SansSerif", Font.PLAIN, 16));
             eyeToggle.setBackground(new Color(0, 0, 0, 0));
@@ -326,7 +325,7 @@ public class CounterStaffDashboard extends JFrame {
                 }
             });
             passwordFieldPanel.add(eyeToggle, BorderLayout.EAST);
-            
+
             passwordRow.add(passwordLbl, BorderLayout.WEST);
             passwordRow.add(passwordFieldPanel, BorderLayout.CENTER);
             profileCard.add(passwordRow);
@@ -377,6 +376,7 @@ public class CounterStaffDashboard extends JFrame {
             public void focusGained(java.awt.event.FocusEvent e) {
                 field.setBorder(BorderFactory.createLineBorder(ACCENT, 2));
             }
+
             @Override
             public void focusLost(java.awt.event.FocusEvent e) {
                 field.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
@@ -391,7 +391,8 @@ public class CounterStaffDashboard extends JFrame {
     private void enterProfileEditMode() {
         profileEditMode = true;
         passwordVisible = false;
-        if (errorMsg != null) errorMsg.setText("");
+        if (errorMsg != null)
+            errorMsg.setText("");
         refreshProfileUI();
     }
 
@@ -401,7 +402,8 @@ public class CounterStaffDashboard extends JFrame {
     private void exitProfileEditMode() {
         profileEditMode = false;
         passwordVisible = false;
-        if (errorMsg != null) errorMsg.setText("");
+        if (errorMsg != null)
+            errorMsg.setText("");
         refreshProfileUI();
     }
 
@@ -423,11 +425,12 @@ public class CounterStaffDashboard extends JFrame {
         String username = usernameField.getText().trim();
         String email = emailField.getText().trim();
         String phone = phoneField.getText().trim();
-        // Get password (it might be masked, so use the original from currentStaff if masked)
+        // Get password (it might be masked, so use the original from currentStaff if
+        // masked)
         String password = passwordVisible ? passwordField.getText().trim() : currentStaff.getPassword();
 
-        if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty() || 
-            email.isEmpty() || phone.isEmpty()) {
+        if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty() ||
+                email.isEmpty() || phone.isEmpty()) {
             errorMsg.setText("❌ All fields are required.");
             profileCard.revalidate();
             profileCard.repaint();
@@ -505,14 +508,13 @@ public class CounterStaffDashboard extends JFrame {
         }
     }
 
-
-    //  PANEL 2 — CUSTOMERS
-    //  TODO (Member 3): Full CRUD for customers
+    // PANEL 2 — CUSTOMERS
     private JPanel buildCustomersPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
         panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
+        // --- Header row ---
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setOpaque(false);
         JLabel heading = new JLabel("Manage Customers");
@@ -520,53 +522,425 @@ public class CounterStaffDashboard extends JFrame {
         heading.setForeground(TEXT_PRIMARY);
 
         JButton addBtn = makePrimaryButton("+ Add Customer");
-        addBtn.addActionListener(e ->
-            JOptionPane.showMessageDialog(this,
-                "TODO (Member 3): Open Add Customer dialog.\n" +
-                "Fields: first name, last name, email, phone.\n" +
-                "Create a User account (role=Customer) in users.txt\n" +
-                "AND a record in customers.txt.",
-                "Add Customer", JOptionPane.INFORMATION_MESSAGE)
-        );
         headerRow.add(heading, BorderLayout.WEST);
-        headerRow.add(addBtn,  BorderLayout.EAST);
+        headerRow.add(addBtn, BorderLayout.EAST);
 
-        String[] cols = {"Customer ID", "First Name", "Last Name", "Email", "Phone"};
+        // --- Table ---
+        String[] cols = { "Customer ID", "First Name", "Last Name", "Email", "Phone" };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
-
-
-        // TODO (Member 3): Load from customers.txt — join with users.txt for names
-        // SAMPLE placeholder row:
-        model.addRow(new Object[]{"C001", "John", "Tan", "john@email.com", "0167654321"});
+        refreshCustomersTable(model);
 
         JTable table = makeStyledTable(model);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scroll = makeScrollPane(table);
 
+        // --- Action row ---
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         actionRow.setOpaque(false);
-        JButton editBtn   = makeSecondaryButton("✏ Edit");
+        JButton editBtn = makeSecondaryButton("✏ Edit");
         JButton deleteBtn = makeSecondaryButton("🗑 Delete");
         deleteBtn.setForeground(DANGER);
-        editBtn.addActionListener(e ->
-            JOptionPane.showMessageDialog(this,
-                "TODO (Member 3): Edit selected customer.", "", JOptionPane.INFORMATION_MESSAGE));
-        deleteBtn.addActionListener(e ->
-            JOptionPane.showMessageDialog(this,
-                "TODO (Member 3): Delete selected customer.", "", JOptionPane.INFORMATION_MESSAGE));
+
+        // Buttons disabled until a row is selected
+        editBtn.setEnabled(false);
+        deleteBtn.setEnabled(false);
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                boolean selected = table.getSelectedRow() != -1;
+                editBtn.setEnabled(selected);
+                deleteBtn.setEnabled(selected);
+            }
+        });
+
+        // --- Button actions ---
+        addBtn.addActionListener(e -> showAddCustomerDialog(model));
+
+        editBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) return;
+            String custId    = (String) model.getValueAt(row, 0);
+            String firstName = (String) model.getValueAt(row, 1);
+            String lastName  = (String) model.getValueAt(row, 2);
+            String email     = (String) model.getValueAt(row, 3);
+            String phone     = (String) model.getValueAt(row, 4);
+            showEditCustomerDialog(model, custId, firstName, lastName, email, phone);
+        });
+
+        deleteBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) return;
+            String custId = (String) model.getValueAt(row, 0);
+            deleteCustomer(model, custId);
+        });
+
         actionRow.add(editBtn);
         actionRow.add(deleteBtn);
 
         panel.add(headerRow, BorderLayout.NORTH);
-        panel.add(scroll,    BorderLayout.CENTER);
+        panel.add(scroll, BorderLayout.CENTER);
         panel.add(actionRow, BorderLayout.SOUTH);
         return panel;
     }
 
+    /**
+     * Reloads the customers table from customers.txt.
+     */
+    private void refreshCustomersTable(DefaultTableModel model) {
+        model.setRowCount(0);
+        try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] p = line.split("\\|");
+                if (p.length < 6) continue;
+                // p[0]=CustID, p[1]=FirstName, p[2]=LastName, p[3]=Email, p[4]=Phone, p[5]=UserID
+                model.addRow(new Object[] { p[0], p[1], p[2], p[3], p[4] });
+            }
+        } catch (IOException ex) {
+            System.err.println("Error reading customers.txt: " + ex.getMessage());
+        }
+    }
 
-    //  PANEL 3 — APPOINTMENTS
-    //  TODO (Member 3): Create and assign appointments; check availability
+    /**
+     * Generates the next Customer ID (e.g. C002 if C001 exists).
+     */
+    private String generateNextCustomerID() {
+        int max = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] p = line.split("\\|");
+                try {
+                    int num = Integer.parseInt(p[0].substring(1));
+                    if (num > max) max = num;
+                } catch (NumberFormatException ignored) {}
+            }
+        } catch (IOException ignored) {}
+        return String.format("C%03d", max + 1);
+    }
+
+    /**
+     * Opens a modal dialog to add a new customer.
+     */
+    private void showAddCustomerDialog(DefaultTableModel tableModel) {
+        JDialog dialog = new JDialog(this, "Add Customer", true);
+        dialog.setSize(420, 420);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(BG_CARD);
+        content.setBorder(new EmptyBorder(24, 28, 24, 28));
+
+        JLabel titleLbl = new JLabel("New Customer");
+        titleLbl.setFont(new Font("SansSerif", Font.BOLD, 18));
+        titleLbl.setForeground(TEXT_PRIMARY);
+        titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(titleLbl);
+        content.add(Box.createVerticalStrut(16));
+
+        // Fields
+        JTextField fFirstName = makeEditableTextField("");
+        JTextField fLastName  = makeEditableTextField("");
+        JTextField fEmail     = makeEditableTextField("");
+        JTextField fPhone     = makeEditableTextField("");
+        JTextField fUsername  = makeEditableTextField("");
+        JTextField fPassword  = makeEditableTextField("");
+
+        content.add(makeDialogFieldRow("First Name", fFirstName));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Last Name",  fLastName));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Email",      fEmail));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Phone",      fPhone));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Username",   fUsername));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Password",   fPassword));
+        content.add(Box.createVerticalStrut(12));
+
+        // Error label
+        JLabel errLbl = new JLabel(" ");
+        errLbl.setForeground(DANGER);
+        errLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        errLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(errLbl);
+        content.add(Box.createVerticalStrut(8));
+
+        // Buttons
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        btnRow.setOpaque(false);
+        btnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JButton saveBtn   = makePrimaryButton("Save");
+        JButton cancelBtn = makeSecondaryButton("Cancel");
+        btnRow.add(saveBtn);
+        btnRow.add(cancelBtn);
+        content.add(btnRow);
+
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        saveBtn.addActionListener(e -> {
+            String fn = fFirstName.getText().trim();
+            String ln = fLastName.getText().trim();
+            String em = fEmail.getText().trim();
+            String ph = fPhone.getText().trim();
+            String un = fUsername.getText().trim();
+            String pw = fPassword.getText().trim();
+
+            if (fn.isEmpty() || ln.isEmpty() || em.isEmpty() || ph.isEmpty()
+                    || un.isEmpty() || pw.isEmpty()) {
+                errLbl.setText("❌ All fields are required.");
+                return;
+            }
+
+            // Check username uniqueness
+            List<User> users = FileHandler.loadAllUsers();
+            for (User u : users) {
+                if (u.getUsername().equalsIgnoreCase(un)) {
+                    errLbl.setText("❌ Username already exists.");
+                    return;
+                }
+            }
+
+            // Generate IDs
+            String newUserID = FileHandler.generateNextUserID();
+            String newCustID = generateNextCustomerID();
+
+            // Create Customer user and add to users list, then save
+            Customer newUser = new Customer(newUserID, un, pw, fn, ln, em, ph);
+            users.add(newUser);
+            FileHandler.saveAllUsers(users);
+
+            // Append to customers.txt
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter("src/data/customers.txt", true))) {
+                bw.write(newCustID + "|" + fn + "|" + ln + "|" + em + "|" + ph + "|" + newUserID);
+                bw.newLine();
+            } catch (IOException ex) {
+                System.err.println("Error writing customers.txt: " + ex.getMessage());
+            }
+
+            refreshCustomersTable(tableModel);
+            dialog.dispose();
+        });
+
+        dialog.setContentPane(content);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Opens a modal dialog to edit an existing customer.
+     */
+    private void showEditCustomerDialog(DefaultTableModel tableModel,
+                                        String custId, String firstName,
+                                        String lastName, String email, String phone) {
+        JDialog dialog = new JDialog(this, "Edit Customer", true);
+        dialog.setSize(420, 340);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(BG_CARD);
+        content.setBorder(new EmptyBorder(24, 28, 24, 28));
+
+        JLabel titleLbl = new JLabel("Edit Customer — " + custId);
+        titleLbl.setFont(new Font("SansSerif", Font.BOLD, 18));
+        titleLbl.setForeground(TEXT_PRIMARY);
+        titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(titleLbl);
+        content.add(Box.createVerticalStrut(16));
+
+        JTextField fFirstName = makeEditableTextField(firstName);
+        JTextField fLastName  = makeEditableTextField(lastName);
+        JTextField fEmail     = makeEditableTextField(email);
+        JTextField fPhone     = makeEditableTextField(phone);
+
+        content.add(makeDialogFieldRow("First Name", fFirstName));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Last Name",  fLastName));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Email",      fEmail));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Phone",      fPhone));
+        content.add(Box.createVerticalStrut(12));
+
+        JLabel errLbl = new JLabel(" ");
+        errLbl.setForeground(DANGER);
+        errLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        errLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(errLbl);
+        content.add(Box.createVerticalStrut(8));
+
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        btnRow.setOpaque(false);
+        btnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JButton saveBtn   = makePrimaryButton("Save");
+        JButton cancelBtn = makeSecondaryButton("Cancel");
+        btnRow.add(saveBtn);
+        btnRow.add(cancelBtn);
+        content.add(btnRow);
+
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        saveBtn.addActionListener(e -> {
+            String fn = fFirstName.getText().trim();
+            String ln = fLastName.getText().trim();
+            String em = fEmail.getText().trim();
+            String ph = fPhone.getText().trim();
+
+            if (fn.isEmpty() || ln.isEmpty() || em.isEmpty() || ph.isEmpty()) {
+                errLbl.setText("❌ All fields are required.");
+                return;
+            }
+
+            // Find the userID linked to this customer from customers.txt
+            String linkedUserID = null;
+            try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) continue;
+                    String[] p = line.split("\\|");
+                    if (p.length >= 6 && p[0].equals(custId)) {
+                        linkedUserID = p[5];
+                        break;
+                    }
+                }
+            } catch (IOException ex) {
+                System.err.println("Error reading customers.txt: " + ex.getMessage());
+            }
+
+            if (linkedUserID == null) {
+                errLbl.setText("❌ Customer record not found.");
+                return;
+            }
+
+            // Update users.txt via FileHandler
+            List<User> users = FileHandler.loadAllUsers();
+            for (User u : users) {
+                if (u.getUserID().equals(linkedUserID)) {
+                    u.setFirstName(fn);
+                    u.setLastName(ln);
+                    u.setEmail(em);
+                    u.setPhone(ph);
+                    break;
+                }
+            }
+            FileHandler.saveAllUsers(users);
+
+            // Update customers.txt
+            List<String> lines = new ArrayList<>();
+            try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) continue;
+                    String[] p = line.split("\\|");
+                    if (p.length >= 6 && p[0].equals(custId)) {
+                        lines.add(custId + "|" + fn + "|" + ln + "|" + em + "|" + ph + "|" + linkedUserID);
+                    } else {
+                        lines.add(line);
+                    }
+                }
+            } catch (IOException ex) {
+                System.err.println("Error reading customers.txt: " + ex.getMessage());
+            }
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter("src/data/customers.txt"))) {
+                for (String l : lines) {
+                    bw.write(l);
+                    bw.newLine();
+                }
+            } catch (IOException ex) {
+                System.err.println("Error writing customers.txt: " + ex.getMessage());
+            }
+
+            refreshCustomersTable(tableModel);
+            dialog.dispose();
+        });
+
+        dialog.setContentPane(content);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Deletes a customer after a confirmation dialog.
+     */
+    private void deleteCustomer(DefaultTableModel tableModel, String custId) {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete customer " + custId + "?",
+                "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        // Find the linked userID from customers.txt
+        String linkedUserID = null;
+        List<String> remainingLines = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] p = line.split("\\|");
+                if (p.length >= 6 && p[0].equals(custId)) {
+                    linkedUserID = p[5];
+                    // Skip this line (delete it)
+                } else {
+                    remainingLines.add(line);
+                }
+            }
+        } catch (IOException ex) {
+            System.err.println("Error reading customers.txt: " + ex.getMessage());
+        }
+
+        // Rewrite customers.txt without the deleted line
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("src/data/customers.txt"))) {
+            for (String l : remainingLines) {
+                bw.write(l);
+                bw.newLine();
+            }
+        } catch (IOException ex) {
+            System.err.println("Error writing customers.txt: " + ex.getMessage());
+        }
+
+        // Remove user from users.txt
+        final String userIDToRemove = linkedUserID;
+        if (userIDToRemove != null) {
+            List<User> users = FileHandler.loadAllUsers();
+            users.removeIf(u -> u.getUserID().equals(userIDToRemove));
+            FileHandler.saveAllUsers(users);
+        }
+
+        refreshCustomersTable(tableModel);
+    }
+
+    /**
+     * Creates a label + field row for dialogs.
+     */
+    private JPanel makeDialogFieldRow(String label, JTextField field) {
+        JPanel row = new JPanel(new BorderLayout(12, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel lbl = new JLabel(label + ":");
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        lbl.setForeground(TEXT_MUTED);
+        lbl.setPreferredSize(new Dimension(90, 20));
+        row.add(lbl, BorderLayout.WEST);
+        row.add(field, BorderLayout.CENTER);
+        return row;
+    }
+
+    // PANEL 3 — APPOINTMENTS
+    // TODO (Member 3): Create and assign appointments; check availability
     private JPanel buildAppointmentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -579,43 +953,41 @@ public class CounterStaffDashboard extends JFrame {
         heading.setForeground(TEXT_PRIMARY);
 
         JButton newBtn = makePrimaryButton("+ New Appointment");
-        newBtn.addActionListener(e ->
-            JOptionPane.showMessageDialog(this,
+        newBtn.addActionListener(e -> JOptionPane.showMessageDialog(this,
                 "TODO (Member 3): Open New Appointment dialog.\n\n" +
-                "Steps:\n" +
-                "  1. Select a customer (JComboBox from customers.txt)\n" +
-                "  2. Select service type: Normal (1hr) or Major (3hr)\n" +
-                "  3. Select date and time\n" +
-                "  4. Pick a technician — filter out those already booked\n" +
-                "     at the selected time slot\n" +
-                "  5. Save to appointments.txt with status = Pending",
-                "New Appointment", JOptionPane.INFORMATION_MESSAGE)
-        );
+                        "Steps:\n" +
+                        "  1. Select a customer (JComboBox from customers.txt)\n" +
+                        "  2. Select service type: Normal (1hr) or Major (3hr)\n" +
+                        "  3. Select date and time\n" +
+                        "  4. Pick a technician — filter out those already booked\n" +
+                        "     at the selected time slot\n" +
+                        "  5. Save to appointments.txt with status = Pending",
+                "New Appointment", JOptionPane.INFORMATION_MESSAGE));
         headerRow.add(heading, BorderLayout.WEST);
-        headerRow.add(newBtn,  BorderLayout.EAST);
+        headerRow.add(newBtn, BorderLayout.EAST);
 
-        String[] cols = {"ID", "Customer", "Technician", "Date", "Time", "Service", "Status"};
+        String[] cols = { "ID", "Customer", "Technician", "Date", "Time", "Service", "Status" };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
-        FileHandler.loadAllAppointments().forEach(a ->
-            model.addRow(new Object[]{
+        FileHandler.loadAllAppointments().forEach(a -> model.addRow(new Object[] {
                 a.getAppointmentID(), a.getCustomerID(), a.getTechnicianID(),
                 a.getDate(), a.getTime(), a.getServiceType(), a.getStatus()
-            })
-        );
+        }));
 
         JTable table = makeStyledTable(model);
         JScrollPane scroll = makeScrollPane(table);
 
         panel.add(headerRow, BorderLayout.NORTH);
-        panel.add(scroll,    BorderLayout.CENTER);
+        panel.add(scroll, BorderLayout.CENTER);
         return panel;
     }
 
-
-    //  PANEL 4 — COLLECT PAYMENT
-    //  TODO (Member 3): Process payment and generate receipt
+    // PANEL 4 — COLLECT PAYMENT
+    // TODO (Member 3): Process payment and generate receipt
     private JPanel buildPaymentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -626,43 +998,41 @@ public class CounterStaffDashboard extends JFrame {
         heading.setForeground(TEXT_PRIMARY);
 
         JLabel note = new JLabel(
-            "<html>TODO (Member 3): Show a list of Completed appointments<br>" +
-            "that have NOT yet been paid. Let the staff select one,<br>" +
-            "confirm the amount (from services.txt), and write to payments.txt.<br>" +
-            "Then show a receipt popup (JDialog) with all details.</html>");
+                "<html>TODO (Member 3): Show a list of Completed appointments<br>" +
+                        "that have NOT yet been paid. Let the staff select one,<br>" +
+                        "confirm the amount (from services.txt), and write to payments.txt.<br>" +
+                        "Then show a receipt popup (JDialog) with all details.</html>");
         note.setFont(new Font("SansSerif", Font.PLAIN, 14));
         note.setForeground(TEXT_MUTED);
         note.setBorder(new EmptyBorder(20, 0, 0, 0));
 
-        String[] cols = {"Payment ID", "Appointment ID", "Amount (RM)", "Date", "Status"};
+        String[] cols = { "Payment ID", "Appointment ID", "Amount (RM)", "Date", "Status" };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
-        FileHandler.loadAllPayments().forEach(p ->
-            model.addRow(new Object[]{
+        FileHandler.loadAllPayments().forEach(p -> model.addRow(new Object[] {
                 p.getPaymentID(), p.getAppointmentID(),
                 String.format("%.2f", p.getAmount()), p.getDate(), p.getStatus()
-            })
-        );
+        }));
 
         JTable table = makeStyledTable(model);
         JScrollPane scroll = makeScrollPane(table);
 
         JButton payBtn = makePrimaryButton("💳  Collect & Generate Receipt");
-        payBtn.addActionListener(e ->
-            JOptionPane.showMessageDialog(this,
+        payBtn.addActionListener(e -> JOptionPane.showMessageDialog(this,
                 "TODO (Member 3): Process payment for selected appointment.",
-                "Collect Payment", JOptionPane.INFORMATION_MESSAGE)
-        );
+                "Collect Payment", JOptionPane.INFORMATION_MESSAGE));
 
         panel.add(heading, BorderLayout.NORTH);
-        panel.add(scroll,  BorderLayout.CENTER);
-        panel.add(payBtn,  BorderLayout.SOUTH);
+        panel.add(scroll, BorderLayout.CENTER);
+        panel.add(payBtn, BorderLayout.SOUTH);
         return panel;
     }
 
-
-    //  SHARED HELPERS
+    // SHARED HELPERS
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);
@@ -696,8 +1066,8 @@ public class CounterStaffDashboard extends JFrame {
         btn.setForeground(TEXT_MUTED);
         btn.setBackground(BG_CARD2);
         btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            new EmptyBorder(8, 14, 8, 14)));
+                BorderFactory.createLineBorder(BORDER_COLOR),
+                new EmptyBorder(8, 14, 8, 14)));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return btn;
@@ -720,19 +1090,27 @@ public class CounterStaffDashboard extends JFrame {
             // Warn user if profile is in edit mode with unsaved changes
             if (profileEditMode) {
                 int result = JOptionPane.showConfirmDialog(this,
-                    "You have unsaved changes. Discard them?",
-                    "Unsaved Changes",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-                if (result != JOptionPane.YES_OPTION) return;
+                        "You have unsaved changes. Discard them?",
+                        "Unsaved Changes",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (result != JOptionPane.YES_OPTION)
+                    return;
                 // Exit edit mode without saving
                 exitProfileEditMode();
             }
             contentLayout.show(contentPanel, cardName);
         });
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
-            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_MUTED);   }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setForeground(TEXT_PRIMARY);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setForeground(TEXT_MUTED);
+            }
         });
         return btn;
     }

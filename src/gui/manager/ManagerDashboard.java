@@ -64,6 +64,10 @@ public class ManagerDashboard extends JFrame {
     private JPanel feedbacksPanel;
     private JPanel reportsPanel;
 
+    // Service Prices edit-mode state (used to auto-cancel when navigating away)
+    private boolean pricesEditing = false;
+    private Runnable pricesCancelAction = null;
+
     // CONSTRUCTOR
     public ManagerDashboard(Manager manager) {
         this.currentManager = manager;
@@ -273,6 +277,7 @@ public class ManagerDashboard extends JFrame {
         usernameField.setBackground(BG_CARD);
         usernameField.setForeground(TEXT_PRIMARY);
         usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(usernameField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -283,6 +288,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setBackground(BG_CARD);
         passwordField.setForeground(TEXT_PRIMARY);
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(passwordField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -292,6 +298,7 @@ public class ManagerDashboard extends JFrame {
         roleCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         roleCombo.setBackground(BG_CARD);
         roleCombo.setForeground(TEXT_PRIMARY);
+        roleCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(roleCombo);
         panel.add(Box.createVerticalStrut(12));
 
@@ -302,6 +309,7 @@ public class ManagerDashboard extends JFrame {
         firstNameField.setBackground(BG_CARD);
         firstNameField.setForeground(TEXT_PRIMARY);
         firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        firstNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(firstNameField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -312,6 +320,7 @@ public class ManagerDashboard extends JFrame {
         lastNameField.setBackground(BG_CARD);
         lastNameField.setForeground(TEXT_PRIMARY);
         lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        lastNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(lastNameField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -322,6 +331,7 @@ public class ManagerDashboard extends JFrame {
         emailField.setBackground(BG_CARD);
         emailField.setForeground(TEXT_PRIMARY);
         emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(emailField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -332,6 +342,7 @@ public class ManagerDashboard extends JFrame {
         phoneField.setBackground(BG_CARD);
         phoneField.setForeground(TEXT_PRIMARY);
         phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(phoneField);
         panel.add(Box.createVerticalStrut(20));
 
@@ -425,6 +436,7 @@ public class ManagerDashboard extends JFrame {
         idField.setForeground(TEXT_MUTED);
         idField.setBorder(new EmptyBorder(8, 8, 8, 8));
         idField.setEditable(false);
+        idField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(idField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -435,6 +447,7 @@ public class ManagerDashboard extends JFrame {
         usernameField.setBackground(BG_CARD);
         usernameField.setForeground(TEXT_PRIMARY);
         usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(usernameField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -445,6 +458,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setBackground(BG_CARD);
         passwordField.setForeground(TEXT_PRIMARY);
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(passwordField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -456,6 +470,7 @@ public class ManagerDashboard extends JFrame {
         roleField.setForeground(TEXT_MUTED);
         roleField.setBorder(new EmptyBorder(8, 8, 8, 8));
         roleField.setEditable(false);
+        roleField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(roleField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -466,6 +481,7 @@ public class ManagerDashboard extends JFrame {
         firstNameField.setBackground(BG_CARD);
         firstNameField.setForeground(TEXT_PRIMARY);
         firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        firstNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(firstNameField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -476,6 +492,7 @@ public class ManagerDashboard extends JFrame {
         lastNameField.setBackground(BG_CARD);
         lastNameField.setForeground(TEXT_PRIMARY);
         lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        lastNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(lastNameField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -486,6 +503,7 @@ public class ManagerDashboard extends JFrame {
         emailField.setBackground(BG_CARD);
         emailField.setForeground(TEXT_PRIMARY);
         emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(emailField);
         panel.add(Box.createVerticalStrut(12));
 
@@ -496,6 +514,7 @@ public class ManagerDashboard extends JFrame {
         phoneField.setBackground(BG_CARD);
         phoneField.setForeground(TEXT_PRIMARY);
         phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(phoneField);
         panel.add(Box.createVerticalStrut(20));
 
@@ -636,6 +655,8 @@ public class ManagerDashboard extends JFrame {
         label.setFont(new Font("SansSerif", Font.BOLD, 12));
         label.setForeground(TEXT_PRIMARY);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Align label text with text inside input fields (matches field left padding = 8)
+        label.setBorder(new EmptyBorder(0, 8, 4, 0));
         return label;
     }
 
@@ -699,16 +720,10 @@ public class ManagerDashboard extends JFrame {
             cardsRow.repaint();
 
             // Extract field references from editable cards
-            // Card structure: [0]=nameField, [1]=spacer, [2]=durationField, [3]=spacer, [4]=priceInputPanel
-            JTextField normalNameField = (JTextField) normalCardEditable.getComponent(0);
-            JTextField normalDurationField = (JTextField) normalCardEditable.getComponent(2);
-            JPanel normalPricePanel = (JPanel) normalCardEditable.getComponent(4);
-            JTextField normalPriceField = (JTextField) normalPricePanel.getComponent(1);
-
-            JTextField majorNameField = (JTextField) majorCardEditable.getComponent(0);
-            JTextField majorDurationField = (JTextField) majorCardEditable.getComponent(2);
-            JPanel majorPricePanel = (JPanel) majorCardEditable.getComponent(4);
-            JTextField majorPriceField = (JTextField) majorPricePanel.getComponent(1);
+            JTextField normalDurationField = findNamedComponent(normalCardEditable, "durationField", JTextField.class);
+            JTextField normalPriceField = findNamedComponent(normalCardEditable, "priceField", JTextField.class);
+            JTextField majorDurationField = findNamedComponent(majorCardEditable, "durationField", JTextField.class);
+            JTextField majorPriceField = findNamedComponent(majorCardEditable, "priceField", JTextField.class);
 
             // Show save/cancel buttons
             JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
@@ -717,7 +732,12 @@ public class ManagerDashboard extends JFrame {
             JButton cancelBtn = makeSecondaryButton("Cancel");
             JButton saveBtn = makePrimaryButton("Save Changes");
 
+            pricesEditing = true;
+            pricesCancelAction = cancelBtn::doClick;
+
             cancelBtn.addActionListener(ce -> {
+                pricesEditing = false;
+                pricesCancelAction = null;
                 editBtn.setEnabled(true);
                 cardsRow.removeAll();
                 cardsRow.add(buildPriceCard(normalName, normalDuration,
@@ -734,19 +754,13 @@ public class ManagerDashboard extends JFrame {
 
             saveBtn.addActionListener(se -> {
                 try {
-                    String newNormalName = normalNameField.getText().trim();
                     String newNormalDuration = normalDurationField.getText().trim();
                     double newNormalPrice = Double.parseDouble(normalPriceField.getText().trim());
 
-                    String newMajorName = majorNameField.getText().trim();
                     String newMajorDuration = majorDurationField.getText().trim();
                     double newMajorPrice = Double.parseDouble(majorPriceField.getText().trim());
 
                     // Validation
-                    if (newNormalName.isEmpty() || newMajorName.isEmpty()) {
-                        showThemedInfo("Service names cannot be empty.");
-                        return;
-                    }
                     if (newNormalDuration.isEmpty() || newMajorDuration.isEmpty()) {
                         showThemedInfo("Durations cannot be empty.");
                         return;
@@ -763,10 +777,12 @@ public class ManagerDashboard extends JFrame {
                     showThemedInfo("Services updated successfully!");
 
                     // Return to view mode
+                    pricesEditing = false;
+                    pricesCancelAction = null;
                     editBtn.setEnabled(true);
                     cardsRow.removeAll();
-                    cardsRow.add(buildPriceCard(newNormalName, newNormalDuration, newNormalPrice, false));
-                    cardsRow.add(buildPriceCard(newMajorName, newMajorDuration, newMajorPrice, false));
+                    cardsRow.add(buildPriceCard(normalName, newNormalDuration, newNormalPrice, false));
+                    cardsRow.add(buildPriceCard(majorName, newMajorDuration, newMajorPrice, false));
                     cardsRow.revalidate();
                     cardsRow.repaint();
 
@@ -800,22 +816,17 @@ public class ManagerDashboard extends JFrame {
         card.setMaximumSize(new Dimension(260, 220));
 
         if (editable) {
-            // Service Name (editable)
-            JTextField nameField = new JTextField(serviceName, 18);
-            nameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
-            nameField.setBackground(BG_CARD2);
-            nameField.setForeground(TEXT_PRIMARY);
-            nameField.setFont(new Font("SansSerif", Font.BOLD, 14));
-            nameField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                new EmptyBorder(6, 8, 6, 8)
-            ));
-            nameField.setAlignmentX(Component.LEFT_ALIGNMENT);
-            card.add(nameField);
+            // Service Name (label only — no textbox in edit mode)
+            JLabel nameLabel = new JLabel(serviceName);
+            nameLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+            nameLabel.setForeground(TEXT_PRIMARY);
+            nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(nameLabel);
             card.add(Box.createVerticalStrut(8));
 
             // Duration (editable)
             JTextField durationField = new JTextField(duration, 15);
+            durationField.setName("durationField");
             durationField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
             durationField.setBackground(BG_CARD2);
             durationField.setForeground(TEXT_PRIMARY);
@@ -838,6 +849,7 @@ public class ManagerDashboard extends JFrame {
             rmLabel.setForeground(TEXT_MUTED);
 
             JTextField priceField = new JTextField(String.format("%.2f", price), 12);
+            priceField.setName("priceField");
             priceField.setMaximumSize(new Dimension(100, 28));
             priceField.setBackground(BG_CARD2);
             priceField.setForeground(ACCENT);
@@ -1248,15 +1260,10 @@ public class ManagerDashboard extends JFrame {
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         java.util.Map<String, Double> servicePrices = FileHandler.loadAllServices();
         java.util.Map<String, Double> serviceRevenue = new java.util.LinkedHashMap<>();
-        for (String service : servicePrices.keySet()) {
-            serviceRevenue.put(service, 0.0);
-        }
         for (Appointment apt : allAppointments) {
             String serviceType = apt.getServiceType();
             Double price = servicePrices.get(serviceType);
-            if (price != null) {
-                serviceRevenue.put(serviceType, serviceRevenue.getOrDefault(serviceType, 0.0) + price);
-            }
+            serviceRevenue.put(serviceType, serviceRevenue.getOrDefault(serviceType, 0.0) + (price != null ? price : 0.0));
         }
         return serviceRevenue;
     }
@@ -1366,7 +1373,7 @@ public class ManagerDashboard extends JFrame {
         int totalCount = serviceCount.values().stream().mapToInt(Integer::intValue).sum();
         for (String serviceType : serviceCount.keySet()) {
             int count = serviceCount.get(serviceType);
-            double revenue = serviceRevenue.get(serviceType);
+            double revenue = serviceRevenue.getOrDefault(serviceType, 0.0);
             double percentage = totalCount > 0 ? (count * 100.0 / totalCount) : 0;
             tableModel.addRow(new Object[]{
                 serviceType,
@@ -1382,8 +1389,12 @@ public class ManagerDashboard extends JFrame {
         panel.add(makeScrollPane(table));
 
         // Right: Pie chart
+        java.util.Map<String, Long> serviceCountLong = new java.util.LinkedHashMap<>();
+        for (var e : serviceCount.entrySet()) {
+            serviceCountLong.put(e.getKey(), e.getValue().longValue());
+        }
         panel.add(createPieChartPanel("Services Distribution", 
-            (java.util.Map<String, Long>) (java.util.Map) serviceCount, 
+            serviceCountLong, 
             new Color[]{ACCENT, new Color(139, 92, 246)}));
 
         return panel;
@@ -1400,22 +1411,21 @@ public class ManagerDashboard extends JFrame {
         java.util.Map<String, Double> servicePrices = FileHandler.loadAllServices();
         java.util.Map<String, Double> monthlyRevenue = new java.util.LinkedHashMap<>();
         java.util.Map<String, Integer> monthlyCounts = new java.util.LinkedHashMap<>();
-        
-        java.util.Calendar cal = java.util.Calendar.getInstance();
-        for (int i = 5; i >= 0; i--) {
-            cal.add(java.util.Calendar.MONTH, -1);
+
+        // Pre-create last 6 months + current month (chronological order)
+        for (int i = 6; i >= 0; i--) {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.add(java.util.Calendar.MONTH, -i);
             String monthKey = String.format("%tB %tY", cal, cal);
             monthlyRevenue.put(monthKey, 0.0);
             monthlyCounts.put(monthKey, 0);
         }
-        cal = java.util.Calendar.getInstance();
-        monthlyRevenue.put(String.format("%tB %tY", cal, cal), 0.0);
-        monthlyCounts.put(String.format("%tB %tY", cal, cal), 0);
 
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
         for (Appointment apt : allAppointments) {
             try {
                 java.util.Date aptDate = sdf.parse(apt.getDate());
+                java.util.Calendar cal = java.util.Calendar.getInstance();
                 cal.setTime(aptDate);
                 String monthKey = String.format("%tB %tY", cal, cal);
                 if (monthlyRevenue.containsKey(monthKey)) {
@@ -1758,6 +1768,9 @@ public class ManagerDashboard extends JFrame {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> {
             btn.setForeground(TEXT_PRIMARY);
+            if (pricesEditing && pricesCancelAction != null && !"PRICES".equals(cardName)) {
+                pricesCancelAction.run();
+            }
             contentLayout.show(contentPanel, cardName);
         });
         btn.addMouseListener(new MouseAdapter() {
@@ -1836,6 +1849,22 @@ public class ManagerDashboard extends JFrame {
     protected void showInfo(String message) {
         JOptionPane.showMessageDialog(this, message, "Info",
             JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private static <T extends Component> T findNamedComponent(Container root, String name, Class<T> type) {
+        for (Component c : root.getComponents()) {
+            if (type.isInstance(c) && c instanceof JComponent) {
+                String n = ((JComponent) c).getName();
+                if (name.equals(n)) {
+                    return type.cast(c);
+                }
+            }
+            if (c instanceof Container) {
+                T found = findNamedComponent((Container) c, name, type);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     /**

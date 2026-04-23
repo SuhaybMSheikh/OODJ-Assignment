@@ -447,4 +447,30 @@ public class FileHandler {
             System.err.println("Error writing services: " + e.getMessage());
         }
     }
+
+    /**
+     * Loads all services from services.txt
+     * Returns a Map where key = service name, value = price
+     */
+    public static java.util.Map<String, Double> loadAllServices() {
+        java.util.Map<String, Double> services = new java.util.LinkedHashMap<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(SERVICES_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] p = line.split("\\|");
+                if (p.length >= 2) {
+                    try {
+                        services.put(p[0], Double.parseDouble(p[1]));
+                    } catch (NumberFormatException e) {
+                        System.err.println("Invalid price for service " + p[0] + ": " + p[1]);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading services: " + e.getMessage());
+        }
+        return services;
+    }
 }

@@ -68,6 +68,7 @@ public class ManagerDashboard extends JFrame {
     private boolean pricesEditing = false;
     private Runnable pricesCancelAction = null;
 
+
     // CONSTRUCTOR
     public ManagerDashboard(Manager manager) {
         this.currentManager = manager;

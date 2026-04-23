@@ -904,7 +904,7 @@ public class ManagerDashboard extends JFrame {
         heading.setForeground(TEXT_PRIMARY);
 
         // Table with richer columns
-        String[] columns = {"Apt ID", "Type", "From", "Status", "Service", "Content", "Date"};
+        String[] columns = {"Apt ID", "Type", "From", "Service", "Content", "Date"};
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -921,7 +921,6 @@ public class ManagerDashboard extends JFrame {
         // Load feedbacks (from technicians) with enriched data
         feedbacks.forEach(f -> {
             model.Appointment apt = appointmentMap.get(f.getAppointmentID());
-            String status = apt != null ? apt.getStatus() : "Unknown";
             String service = apt != null ? apt.getServiceType() : "Unknown";
             String date = apt != null ? apt.getDate() : "N/A";
             
@@ -929,7 +928,6 @@ public class ManagerDashboard extends JFrame {
                 f.getAppointmentID(),
                 "Feedback",
                 f.getTechnicianID(),
-                status,
                 service,
                 f.getFeedbackText(),
                 date
@@ -939,7 +937,6 @@ public class ManagerDashboard extends JFrame {
         // Load comments (from customers) with enriched data
         comments.forEach(c -> {
             model.Appointment apt = appointmentMap.get(c.getAppointmentID());
-            String status = apt != null ? apt.getStatus() : "Unknown";
             String service = apt != null ? apt.getServiceType() : "Unknown";
             String date = apt != null ? apt.getDate() : "N/A";
             
@@ -947,7 +944,6 @@ public class ManagerDashboard extends JFrame {
                 c.getAppointmentID(),
                 "Comment",
                 c.getCustomerID(),
-                status,
                 service,
                 c.getCommentText(),
                 date
@@ -955,7 +951,7 @@ public class ManagerDashboard extends JFrame {
         });
 
         JTable table = makeStyledTable(model);
-        table.getColumnModel().getColumn(5).setPreferredWidth(300);
+        table.getColumnModel().getColumn(4).setPreferredWidth(300);
         table.getColumnModel().getColumn(0).setPreferredWidth(60);
         table.getColumnModel().getColumn(1).setPreferredWidth(80);
         table.getColumnModel().getColumn(2).setPreferredWidth(80);
@@ -970,7 +966,7 @@ public class ManagerDashboard extends JFrame {
                 if (e.getClickCount() == 2) {
                     int row = table.convertRowIndexToModel(table.rowAtPoint(e.getPoint()));
                     if (row >= 0) {
-                        String content = (String) model.getValueAt(row, 5);
+                        String content = (String) model.getValueAt(row, 4);
                         String type = (String) model.getValueAt(row, 1);
                         String from = (String) model.getValueAt(row, 2);
                         showThemedInfo("<b>" + type + " from " + from + ":</b><br><br>" + content);

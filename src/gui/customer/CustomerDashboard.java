@@ -4,6 +4,7 @@ import model.Customer;
 import model.Appointment;
 import model.Feedback;
 import model.Comment;
+import model.User;
 import util.FileHandler;
 import util.Session;
 
@@ -66,7 +67,6 @@ public class CustomerDashboard extends JFrame {
         setSize(1100, 700);
         setLocationRelativeTo(null);
         setMinimumSize(new Dimension(900, 600));
-
         buildUI();
     }
 
@@ -140,6 +140,7 @@ public class CustomerDashboard extends JFrame {
 
         sidebar.add(makeNavButton("👤  My Profile",       "PROFILE"));
         sidebar.add(makeNavButton("📋  Service History",  "HISTORY"));
+        sidebar.add(makeNavButton("🛠  Technician Feedback", "TECH_FEEDBACK"));
         sidebar.add(makeNavButton("💬  Leave a Comment",  "COMMENT"));
 
         sidebar.add(Box.createVerticalGlue());
@@ -154,6 +155,7 @@ public class CustomerDashboard extends JFrame {
 
         contentPanel.add(buildProfilePanel(), "PROFILE");
         contentPanel.add(buildHistoryPanel(), "HISTORY");
+        contentPanel.add(buildTechnicianFeedbackPanel(), "TECH_FEEDBACK");
         contentPanel.add(buildCommentPanel(), "COMMENT");
 
         contentLayout.show(contentPanel, "HISTORY");
@@ -250,20 +252,20 @@ public class CustomerDashboard extends JFrame {
             .collect(java.util.stream.Collectors.toList());
 
         // Build lookup maps once to avoid repeated scans for each row.
-        List<Feedback> feedbacks = FileHandler.loadAllFeedbacks();
+        List<Comment> comments = FileHandler.loadAllComments();
         List<model.Payment> payments = FileHandler.loadAllPayments();
         Map<String, Double> serviceFees = FileHandler.loadAllServices();
-        Map<String, String> feedbackByAppointment = new HashMap<>();
+        Map<String, String> commentByAppointment = new HashMap<>();
         Map<String, model.Payment> paymentByAppointment = new HashMap<>();
 
-        feedbacks.forEach(f -> feedbackByAppointment.putIfAbsent(
-            f.getAppointmentID(), f.getFeedbackText()
-        ));
+        comments.stream()
+            .filter(c -> resolvedCustomerID.equals(c.getCustomerID()))
+            .forEach(c -> commentByAppointment.put(c.getAppointmentID(), c.getCommentText()));
         payments.forEach(p -> paymentByAppointment.putIfAbsent(p.getAppointmentID(), p));
 
         myAppts.forEach(a -> {
-            String feedbackText = feedbackByAppointment.getOrDefault(
-                a.getAppointmentID(), "No feedback yet"
+            String customerComment = commentByAppointment.getOrDefault(
+                a.getAppointmentID(), "No comment yet"
             );
 
             double fee = serviceFees.getOrDefault(a.getServiceType(), 0.0);
@@ -278,7 +280,7 @@ public class CustomerDashboard extends JFrame {
                 a.getServiceType(),
                 String.format("%.2f", fee),
                 a.getStatus(),
-                feedbackText,
+                customerComment,
                 payStatus
             });
         });
@@ -327,6 +329,99 @@ public class CustomerDashboard extends JFrame {
         return "";
     }
 
+    private JPanel buildTechnicianFeedbackPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        JLabel heading = new JLabel("Technician Feedback");
+        heading.setFont(new Font("SansSerif", Font.BOLD, 22));
+        heading.setForeground(TEXT_PRIMARY);
+
+        String resolvedCustomerID = resolveCustomerID();
+        if (resolvedCustomerID == null || resolvedCustomerID.isBlank()) {
+            JLabel warning = new JLabel(
+                "<html>Unable to load technician feedback because your customer profile ID was not found.<br>" +
+                "Please contact counter staff for assistance.</html>"
+            );
+            warning.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            warning.setForeground(DANGER);
+            warning.setBorder(new EmptyBorder(20, 0, 0, 0));
+            panel.add(heading, BorderLayout.NORTH);
+            panel.add(warning, BorderLayout.CENTER);
+            return panel;
+        }
+
+        String[] cols = {"Appt ID", "Date", "Service Type", "Technician", "Feedback"};
+        DefaultTableModel model = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        List<Appointment> myAppts = FileHandler.loadAllAppointments()
+            .stream()
+            .filter(a -> resolvedCustomerID.equals(a.getCustomerID()))
+            .sorted(Comparator.comparing(Appointment::getDate).reversed())
+            .collect(java.util.stream.Collectors.toList());
+
+        Map<String, Appointment> apptByID = new HashMap<>();
+        myAppts.forEach(a -> apptByID.put(a.getAppointmentID(), a));
+
+        List<User> users = FileHandler.loadAllUsers();
+        Map<String, String> technicianNameByUserID = new HashMap<>();
+        users.stream()
+            .filter(u -> "Technician".equals(u.getRole()))
+            .forEach(u -> technicianNameByUserID.put(u.getUserID(), u.getFullName()));
+
+        List<Feedback> myFeedbacks = FileHandler.loadAllFeedbacks()
+            .stream()
+            .filter(f -> apptByID.containsKey(f.getAppointmentID()))
+            .collect(java.util.stream.Collectors.toList());
+
+        myFeedbacks.forEach(f -> {
+            Appointment appt = apptByID.get(f.getAppointmentID());
+            if (appt == null) return;
+
+            String feedbackTechID = f.getTechnicianID();
+            String feedbackTechName = FileHandler.getTechnicianNameByID(feedbackTechID);
+            String apptTechID = appt.getTechnicianID();
+            String apptTechName = technicianNameByUserID.getOrDefault(apptTechID, "Unknown Technician");
+
+            String technicianDisplay;
+            if (feedbackTechName != null && !feedbackTechName.isBlank() && !"Unknown Technician".equals(feedbackTechName)) {
+                technicianDisplay = feedbackTechID + " - " + feedbackTechName;
+            } else if (apptTechID != null && !apptTechID.isBlank()) {
+                technicianDisplay = apptTechID + " - " + apptTechName;
+            } else {
+                technicianDisplay = "Unknown Technician";
+            }
+
+            model.addRow(new Object[]{
+                appt.getAppointmentID(),
+                appt.getDate(),
+                appt.getServiceType(),
+                technicianDisplay,
+                f.getFeedbackText()
+            });
+        });
+
+        JTable table = makeStyledTable(model);
+        table.getColumnModel().getColumn(3).setPreferredWidth(180); // technician
+        table.getColumnModel().getColumn(4).setPreferredWidth(360); // feedback
+        JScrollPane scroll = makeScrollPane(table);
+
+        panel.add(heading, BorderLayout.NORTH);
+        if (model.getRowCount() == 0) {
+            JLabel empty = new JLabel("No technician feedback available for your appointments yet.");
+            empty.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            empty.setForeground(TEXT_MUTED);
+            empty.setHorizontalAlignment(SwingConstants.CENTER);
+            panel.add(empty, BorderLayout.CENTER);
+        } else {
+            panel.add(scroll, BorderLayout.CENTER);
+        }
+        return panel;
+    }
+
 
     //  PANEL 3 — LEAVE A COMMENT
     //  TODO (Member 1): Allow customer to leave a comment on their appointments
@@ -355,12 +450,16 @@ public class CustomerDashboard extends JFrame {
 
         // Populate dropdown with this customer's completed appointments
         DefaultComboBoxModel<String> comboModel = new DefaultComboBoxModel<>();
-        FileHandler.loadAllAppointments()
-            .stream()
-            .filter(a -> "Completed".equals(a.getStatus()))
-            .forEach(a -> comboModel.addElement(
-                a.getAppointmentID() + " — " + a.getDate() + " (" + a.getServiceType() + ")"
-            ));
+        String resolvedCustomerID = resolveCustomerID();
+        if (resolvedCustomerID != null && !resolvedCustomerID.isBlank()) {
+            FileHandler.loadAllAppointments()
+                .stream()
+                .filter(a -> resolvedCustomerID.equals(a.getCustomerID()))
+                .filter(a -> "Completed".equals(a.getStatus()))
+                .forEach(a -> comboModel.addElement(
+                    a.getAppointmentID() + " — " + a.getDate() + " (" + a.getServiceType() + ")"
+                ));
+        }
         if (comboModel.getSize() == 0) comboModel.addElement("No completed appointments");
 
         JComboBox<String> apptCombo = new JComboBox<>(comboModel);
@@ -369,6 +468,13 @@ public class CustomerDashboard extends JFrame {
         apptCombo.setForeground(TEXT_PRIMARY);
         apptCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         apptCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        Map<String, String> existingCommentByAppointment = new HashMap<>();
+        if (resolvedCustomerID != null && !resolvedCustomerID.isBlank()) {
+            FileHandler.loadAllComments().stream()
+                .filter(c -> resolvedCustomerID.equals(c.getCustomerID()))
+                .forEach(c -> existingCommentByAppointment.put(c.getAppointmentID(), c.getCommentText()));
+        }
 
         // Comment text area
         JLabel commentLbl = new JLabel("Your Comment:");
@@ -393,6 +499,23 @@ public class CustomerDashboard extends JFrame {
         commentScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         commentScroll.setBorder(null);
 
+        apptCombo.addActionListener(e -> {
+            String selected = (String) apptCombo.getSelectedItem();
+            if (selected == null || selected.startsWith("No completed")) {
+                commentArea.setText("");
+                return;
+            }
+            String selectedApptID = selected.split(" — ")[0].trim();
+            commentArea.setText(existingCommentByAppointment.getOrDefault(selectedApptID, ""));
+        });
+        if (comboModel.getSize() > 0) {
+            String firstSelected = (String) comboModel.getSelectedItem();
+            if (firstSelected != null && !firstSelected.startsWith("No completed")) {
+                String firstApptID = firstSelected.split(" — ")[0].trim();
+                commentArea.setText(existingCommentByAppointment.getOrDefault(firstApptID, ""));
+            }
+        }
+
         JLabel errorLbl = new JLabel(" ");
         errorLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
         errorLbl.setForeground(DANGER);
@@ -403,6 +526,7 @@ public class CustomerDashboard extends JFrame {
         submitBtn.addActionListener(e -> {
             String selectedAppt = (String) apptCombo.getSelectedItem();
             String commentText  = commentArea.getText().trim();
+            String customerID = resolveCustomerID();
 
             if (selectedAppt == null || selectedAppt.startsWith("No completed")) {
                 errorLbl.setText("No appointment selected."); return;
@@ -410,22 +534,44 @@ public class CustomerDashboard extends JFrame {
             if (commentText.isEmpty()) {
                 errorLbl.setText("Comment cannot be empty."); return;
             }
+            if (customerID == null || customerID.isBlank()) {
+                errorLbl.setText("Unable to verify your customer profile."); return;
+            }
 
             // Extract appointment ID from the combo string (e.g. "A001 — 2025-05-10...")
             String apptID = selectedAppt.split(" — ")[0].trim();
+            boolean isOwnedCompletedAppointment = FileHandler.loadAllAppointments()
+                .stream()
+                .anyMatch(a -> a.getAppointmentID().equals(apptID)
+                    && customerID.equals(a.getCustomerID())
+                    && "Completed".equals(a.getStatus()));
+            if (!isOwnedCompletedAppointment) {
+                errorLbl.setText("Invalid appointment selection."); return;
+            }
 
-            // TODO (Member 1): Implement file write
-            // Steps:
-            //   1. Create: new Comment(apptID, currentCustomer.getCustomerID(), commentText)
-            //   2. List<Comment> comments = FileHandler.loadAllComments()
-            //   3. comments.add(newComment)
-            //   4. FileHandler.saveAllComments(comments)
-            //   5. Show success, clear the text area
+            // Keep one record per line in comments.txt
+            String sanitizedComment = commentText
+                .replaceAll("[\\r\\n]+", " ")
+                .replaceAll("\\s{2,}", " ")
+                .trim();
+
+            List<Comment> comments = FileHandler.loadAllComments();
+            Comment existingComment = comments.stream()
+                .filter(c -> apptID.equals(c.getAppointmentID()) && customerID.equals(c.getCustomerID()))
+                .findFirst()
+                .orElse(null);
+            if (existingComment != null) {
+                existingComment.setCommentText(sanitizedComment);
+            } else {
+                comments.add(new Comment(apptID, customerID, sanitizedComment));
+            }
+            FileHandler.saveAllComments(comments);
+            existingCommentByAppointment.put(apptID, sanitizedComment);
 
             JOptionPane.showMessageDialog(this,
-                "TODO (Member 1): Save comment to comments.txt\n\n" +
-                "Appointment: " + apptID + "\n" +
-                "Comment: " + commentText);
+                "Comment saved successfully.",
+                "Success",
+                JOptionPane.INFORMATION_MESSAGE);
             commentArea.setText("");
             errorLbl.setText(" ");
         });

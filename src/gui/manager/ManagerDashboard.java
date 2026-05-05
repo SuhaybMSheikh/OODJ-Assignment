@@ -59,6 +59,7 @@ public class ManagerDashboard extends JFrame {
     private JPanel     contentPanel;
 
     // PANELS (one per sidebar section)
+    private JPanel profilePanel;
     private JPanel usersPanel;
     private JPanel pricesPanel;
     private JPanel feedbacksPanel;
@@ -67,6 +68,21 @@ public class ManagerDashboard extends JFrame {
     // Service Prices edit-mode state (used to auto-cancel when navigating away)
     private boolean pricesEditing = false;
     private Runnable pricesCancelAction = null;
+
+    // TOP BAR COMPONENT (stored for updating)
+    private JLabel topBarUserLabel;
+
+    // PROFILE PANEL STATE
+    private boolean profileEditMode = false;
+    private JPanel profileCard;
+    private JLabel errorMsg;
+    private JTextField firstNameField;
+    private JTextField lastNameField;
+    private JTextField usernameField;
+    private JTextField emailField;
+    private JTextField phoneField;
+    private JTextField passwordField;
+    private boolean passwordVisible = false;
 
 
     // CONSTRUCTOR
@@ -110,9 +126,9 @@ public class ManagerDashboard extends JFrame {
         JPanel rightSide = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
         rightSide.setOpaque(false);
 
-        JLabel userLbl = new JLabel("👤  " + currentManager.getFullName() + "  ·  Manager");
-        userLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        userLbl.setForeground(TEXT_MUTED);
+        topBarUserLabel = new JLabel("👤  " + currentManager.getFullName() + "  ·  Manager");
+        topBarUserLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        topBarUserLabel.setForeground(TEXT_MUTED);
 
         JButton logoutBtn = makeTextButton("Logout", DANGER);
         logoutBtn.addActionListener(e -> {
@@ -121,7 +137,7 @@ public class ManagerDashboard extends JFrame {
             new main.LoginFrame().setVisible(true);
         });
 
-        rightSide.add(userLbl);
+        rightSide.add(topBarUserLabel);
         rightSide.add(logoutBtn);
 
         bar.add(title,     BorderLayout.WEST);
@@ -148,7 +164,8 @@ public class ManagerDashboard extends JFrame {
         sidebar.add(Box.createVerticalStrut(12));
 
         // Each nav item shows a different panel in the content area
-        sidebar.add(makeNavButton("👥  Manage Users",    "USERS"));
+        sidebar.add(makeNavButton("�  My Profile",     "PROFILE"));
+        sidebar.add(makeNavButton("�👥  Manage Users",    "USERS"));
         sidebar.add(makeNavButton("💰  Service Prices",  "PRICES"));
         sidebar.add(makeNavButton("💬  Feedbacks",       "FEEDBACKS"));
         sidebar.add(makeNavButton("📊  Reports",         "REPORTS"));
@@ -165,18 +182,382 @@ public class ManagerDashboard extends JFrame {
         contentPanel.setBackground(BG_DARK);
 
         // Build each panel
+        profilePanel   = buildProfilePanel();
         usersPanel     = buildUsersPanel();
         pricesPanel    = buildPricesPanel();
         feedbacksPanel = buildFeedbacksPanel();
         reportsPanel   = buildReportsPanel();
 
+        contentPanel.add(profilePanel,   "PROFILE");
         contentPanel.add(usersPanel,     "USERS");
         contentPanel.add(pricesPanel,    "PRICES");
         contentPanel.add(feedbacksPanel, "FEEDBACKS");
         contentPanel.add(reportsPanel,   "REPORTS");
 
-        contentLayout.show(contentPanel, "USERS");  // default view
+        contentLayout.show(contentPanel, "PROFILE");  // default view
         return contentPanel;
+    }
+
+
+    //  PANEL 0 — MY PROFILE
+    //  Allow manager to edit their own details
+    private JPanel buildProfilePanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        JLabel heading = new JLabel("My Profile");
+        heading.setFont(new Font("SansSerif", Font.BOLD, 22));
+        heading.setForeground(TEXT_PRIMARY);
+
+        profileCard = new JPanel();
+        profileCard.setLayout(new BoxLayout(profileCard, BoxLayout.Y_AXIS));
+        profileCard.setBackground(BG_CARD);
+        profileCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(28, 28, 28, 28)));
+        profileCard.setMaximumSize(new Dimension(500, Integer.MAX_VALUE));
+        profileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Recreate the profile UI in view mode
+        refreshProfileUI();
+
+        panel.add(heading, BorderLayout.NORTH);
+        panel.add(profileCard, BorderLayout.CENTER);
+        return panel;
+    }
+
+    /**
+     * Refreshes the profile card UI based on current edit mode state.
+     * In view mode: shows labels + Edit button.
+     * In edit mode: shows text fields + Done/Cancel buttons + error label.
+     */
+    private void refreshProfileUI() {
+        profileCard.removeAll();
+
+        if (!profileEditMode) {
+            // ===== VIEW MODE =====
+            profileCard.add(makeInfoRow("Full Name", currentManager.getFullName()));
+            profileCard.add(Box.createVerticalStrut(12));
+            profileCard.add(makeInfoRow("Username", currentManager.getUsername()));
+            profileCard.add(Box.createVerticalStrut(12));
+            profileCard.add(makeInfoRow("Email", currentManager.getEmail()));
+            profileCard.add(Box.createVerticalStrut(12));
+            profileCard.add(makeInfoRow("Phone", currentManager.getPhone()));
+            profileCard.add(Box.createVerticalStrut(12));
+            profileCard.add(makeInfoRow("Password", maskPassword(currentManager.getPassword())));
+            profileCard.add(Box.createVerticalStrut(24));
+
+            JButton editBtn = makePrimaryButton("✏  Edit Profile");
+            editBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+            editBtn.addActionListener(e -> enterProfileEditMode());
+            profileCard.add(editBtn);
+
+        } else {
+            // ===== EDIT MODE =====
+            // Label row: "Full Name" label on the left
+            JPanel fullNameRow = new JPanel(new BorderLayout(16, 0));
+            fullNameRow.setOpaque(false);
+            fullNameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel fullNameLbl = new JLabel("Full Name:");
+            fullNameLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            fullNameLbl.setForeground(TEXT_MUTED);
+            fullNameLbl.setPreferredSize(new Dimension(100, 20));
+
+            // Split into first and last name fields
+            JPanel nameFieldsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            nameFieldsPanel.setOpaque(false);
+
+            firstNameField = makeEditableTextField(currentManager.getFirstName());
+            lastNameField = makeEditableTextField(currentManager.getLastName());
+
+            nameFieldsPanel.add(firstNameField);
+            nameFieldsPanel.add(lastNameField);
+
+            fullNameRow.add(fullNameLbl, BorderLayout.WEST);
+            fullNameRow.add(nameFieldsPanel, BorderLayout.CENTER);
+            profileCard.add(fullNameRow);
+            profileCard.add(Box.createVerticalStrut(12));
+
+            // Username field
+            JPanel usernameRow = new JPanel(new BorderLayout(16, 0));
+            usernameRow.setOpaque(false);
+            usernameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel usernameLbl = new JLabel("Username:");
+            usernameLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            usernameLbl.setForeground(TEXT_MUTED);
+            usernameLbl.setPreferredSize(new Dimension(100, 20));
+            usernameField = makeEditableTextField(currentManager.getUsername());
+            usernameRow.add(usernameLbl, BorderLayout.WEST);
+            usernameRow.add(usernameField, BorderLayout.CENTER);
+            profileCard.add(usernameRow);
+            profileCard.add(Box.createVerticalStrut(12));
+
+            // Email field
+            JPanel emailRow = new JPanel(new BorderLayout(16, 0));
+            emailRow.setOpaque(false);
+            emailRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel emailLbl = new JLabel("Email:");
+            emailLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            emailLbl.setForeground(TEXT_MUTED);
+            emailLbl.setPreferredSize(new Dimension(100, 20));
+            emailField = makeEditableTextField(currentManager.getEmail());
+            emailRow.add(emailLbl, BorderLayout.WEST);
+            emailRow.add(emailField, BorderLayout.CENTER);
+            profileCard.add(emailRow);
+            profileCard.add(Box.createVerticalStrut(12));
+
+            // Phone field
+            JPanel phoneRow = new JPanel(new BorderLayout(16, 0));
+            phoneRow.setOpaque(false);
+            phoneRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel phoneLbl = new JLabel("Phone:");
+            phoneLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            phoneLbl.setForeground(TEXT_MUTED);
+            phoneLbl.setPreferredSize(new Dimension(100, 20));
+            phoneField = makeEditableTextField(currentManager.getPhone());
+            phoneRow.add(phoneLbl, BorderLayout.WEST);
+            phoneRow.add(phoneField, BorderLayout.CENTER);
+            profileCard.add(phoneRow);
+            profileCard.add(Box.createVerticalStrut(12));
+
+            // Password field with eye toggle
+            JPanel passwordRow = new JPanel(new BorderLayout(16, 0));
+            passwordRow.setOpaque(false);
+            passwordRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel passwordLbl = new JLabel("Password:");
+            passwordLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            passwordLbl.setForeground(TEXT_MUTED);
+            passwordLbl.setPreferredSize(new Dimension(100, 20));
+
+            passwordField = makeEditableTextField(maskPassword(currentManager.getPassword()));
+
+            JPanel passwordFieldPanel = new JPanel(new BorderLayout(8, 0));
+            passwordFieldPanel.setOpaque(false);
+            passwordFieldPanel.add(passwordField, BorderLayout.CENTER);
+
+            JButton eyeToggle = new JButton("👁");
+            eyeToggle.setFont(new Font("SansSerif", Font.PLAIN, 16));
+            eyeToggle.setBackground(new Color(0, 0, 0, 0));
+            eyeToggle.setOpaque(false);
+            eyeToggle.setBorderPainted(false);
+            eyeToggle.setFocusPainted(false);
+            eyeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            eyeToggle.setPreferredSize(new Dimension(30, 28));
+            eyeToggle.addActionListener(e -> {
+                passwordVisible = !passwordVisible;
+                String currentText = passwordField.getText();
+                if (passwordVisible) {
+                    eyeToggle.setText("🙈");
+                    // Remove masking to show actual password
+                    passwordField.setText(currentManager.getPassword());
+                } else {
+                    eyeToggle.setText("👁");
+                    // Apply masking
+                    passwordField.setText(maskPassword(currentManager.getPassword()));
+                }
+            });
+            passwordFieldPanel.add(eyeToggle, BorderLayout.EAST);
+
+            passwordRow.add(passwordLbl, BorderLayout.WEST);
+            passwordRow.add(passwordFieldPanel, BorderLayout.CENTER);
+            profileCard.add(passwordRow);
+            profileCard.add(Box.createVerticalStrut(16));
+
+            // Error message label (initially empty, shown on validation failure)
+            errorMsg = new JLabel();
+            errorMsg.setForeground(DANGER);
+            errorMsg.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            errorMsg.setAlignmentX(Component.LEFT_ALIGNMENT);
+            profileCard.add(errorMsg);
+            profileCard.add(Box.createVerticalStrut(12));
+
+            // Action buttons
+            JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+            buttonRow.setOpaque(false);
+
+            JButton doneBtn = makePrimaryButton("✓  Done");
+            doneBtn.addActionListener(e -> onProfileSave());
+
+            JButton cancelBtn = makeSecondaryButton("✕  Cancel");
+            cancelBtn.addActionListener(e -> exitProfileEditMode());
+
+            buttonRow.add(doneBtn);
+            buttonRow.add(cancelBtn);
+            profileCard.add(buttonRow);
+        }
+
+        profileCard.revalidate();
+        profileCard.repaint();
+    }
+
+    /**
+     * Creates an editable JTextField with the given value,
+     * styled with border and colors as specified.
+     */
+    private JTextField makeEditableTextField(String value) {
+        JTextField field = new JTextField(value);
+        field.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        field.setBackground(BG_CARD2);
+        field.setForeground(TEXT_PRIMARY);
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        field.setMaximumSize(new Dimension(200, 28));
+        field.setPreferredSize(new Dimension(200, 28));
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                field.setBorder(BorderFactory.createLineBorder(ACCENT, 2));
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                field.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+            }
+        });
+        return field;
+    }
+
+    /**
+     * Enter edit mode: clear the error message and refresh UI.
+     */
+    private void enterProfileEditMode() {
+        profileEditMode = true;
+        passwordVisible = false;
+        if (errorMsg != null)
+            errorMsg.setText("");
+        refreshProfileUI();
+    }
+
+    /**
+     * Exit edit mode without saving: discard text fields and return to view.
+     */
+    private void exitProfileEditMode() {
+        profileEditMode = false;
+        passwordVisible = false;
+        if (errorMsg != null)
+            errorMsg.setText("");
+        refreshProfileUI();
+    }
+
+    /**
+     * Creates a masked password string with asterisks.
+     * One asterisk per character.
+     */
+    private String maskPassword(String password) {
+        return "*".repeat(password.length());
+    }
+
+    /**
+     * Validate profile form and save if valid.
+     */
+    private void onProfileSave() {
+        // Validate: no field should be empty
+        String firstName = firstNameField.getText().trim();
+        String lastName = lastNameField.getText().trim();
+        String username = usernameField.getText().trim();
+        String email = emailField.getText().trim();
+        String phone = phoneField.getText().trim();
+        // Get password (it might be masked, so use the original from currentManager if
+        // masked)
+        String password = passwordVisible ? passwordField.getText().trim() : currentManager.getPassword();
+
+        if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty() ||
+                email.isEmpty() || phone.isEmpty()) {
+            errorMsg.setText("❌ All fields are required.");
+            profileCard.revalidate();
+            profileCard.repaint();
+            return;
+        }
+
+        // Validate phone number: 10-11 digits only
+        if (!phone.matches("\\d{10,11}")) {
+            errorMsg.setText("❌ Phone must be 10-11 digits.");
+            profileCard.revalidate();
+            profileCard.repaint();
+            return;
+        }
+
+        // Load all users from file
+        List<User> users = FileHandler.loadAllUsers();
+
+        // Find the current user in the list by userID
+        User userToUpdate = null;
+        for (User u : users) {
+            if (u.getUserID().equals(currentManager.getUserID())) {
+                userToUpdate = u;
+                break;
+            }
+        }
+
+        if (userToUpdate == null) {
+            errorMsg.setText("❌ Error: User not found in database.");
+            profileCard.revalidate();
+            profileCard.repaint();
+            return;
+        }
+
+        // Update the user's details
+        userToUpdate.setFirstName(firstName);
+        userToUpdate.setLastName(lastName);
+        userToUpdate.setUsername(username);
+        userToUpdate.setEmail(email);
+        userToUpdate.setPhone(phone);
+        // Update password if it was changed (not masked)
+        if (passwordVisible) {
+            userToUpdate.setPassword(password);
+        }
+
+        // Save the full list back to file
+        FileHandler.saveAllUsers(users);
+
+        // Update the currentManager object in memory
+        currentManager.setFirstName(firstName);
+        currentManager.setLastName(lastName);
+        currentManager.setUsername(username);
+        currentManager.setEmail(email);
+        currentManager.setPhone(phone);
+        // Update password if it was changed (not masked)
+        if (passwordVisible) {
+            currentManager.setPassword(password);
+        }
+
+        // Exit edit mode and show view mode with updated values
+        profileEditMode = false;
+        passwordVisible = false;
+        errorMsg.setText("");
+        refreshProfileUI();
+
+        // Update the top bar user label
+        updateTopBarLabel();
+    }
+
+    /**
+     * Updates the top bar user label to reflect the latest name.
+     */
+    private void updateTopBarLabel() {
+        if (topBarUserLabel != null) {
+            topBarUserLabel.setText("👤  " + currentManager.getFullName() + "  ·  Manager");
+        }
+    }
+
+    /**
+     * Creates a label + field row for displaying info.
+     */
+    private JPanel makeInfoRow(String label, String value) {
+        JPanel row = new JPanel(new BorderLayout(16, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JLabel lbl = new JLabel(label + ":");
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        lbl.setForeground(TEXT_MUTED);
+        lbl.setPreferredSize(new Dimension(100, 20));
+        JLabel val = new JLabel(value);
+        val.setFont(new Font("SansSerif", Font.BOLD, 13));
+        val.setForeground(TEXT_PRIMARY);
+        row.add(lbl, BorderLayout.WEST);
+        row.add(val, BorderLayout.CENTER);
+        return row;
     }
 
 
@@ -1765,6 +2146,18 @@ public class ManagerDashboard extends JFrame {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> {
             btn.setForeground(TEXT_PRIMARY);
+            // Warn user if profile is in edit mode with unsaved changes
+            if (profileEditMode && !"PROFILE".equals(cardName)) {
+                int result = JOptionPane.showConfirmDialog(this,
+                        "You have unsaved changes. Discard them?",
+                        "Unsaved Changes",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (result != JOptionPane.YES_OPTION)
+                    return;
+                // Exit edit mode without saving
+                exitProfileEditMode();
+            }
             if (pricesEditing && pricesCancelAction != null && !"PRICES".equals(cardName)) {
                 pricesCancelAction.run();
             }

@@ -265,11 +265,17 @@ public class ManagerDashboard extends JFrame {
             fullNameLbl.setPreferredSize(new Dimension(100, 20));
 
             // Split into first and last name fields
-            JPanel nameFieldsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            JPanel nameFieldsPanel = new JPanel(new GridLayout(1, 2, 12, 0));
             nameFieldsPanel.setOpaque(false);
 
             firstNameField = makeEditableTextField(currentManager.getFirstName());
             lastNameField = makeEditableTextField(currentManager.getLastName());
+
+            Dimension nameFieldHeight = new Dimension(0, 28);
+            firstNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            lastNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            firstNameField.setPreferredSize(nameFieldHeight);
+            lastNameField.setPreferredSize(nameFieldHeight);
 
             nameFieldsPanel.add(firstNameField);
             nameFieldsPanel.add(lastNameField);

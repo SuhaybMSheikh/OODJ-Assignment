@@ -4,6 +4,7 @@ import model.Customer;
 import model.Appointment;
 import model.Feedback;
 import model.Comment;
+import model.Payment;
 import model.User;
 import util.FileHandler;
 import util.Session;
@@ -21,6 +22,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * GUI CLASS — CustomerDashboard
@@ -51,6 +53,7 @@ public class CustomerDashboard extends JFrame {
     // LAYOUT
     private CardLayout contentLayout;
     private JPanel     contentPanel;
+    private JPanel     historyPanel;
 
     // PROFILE PANEL STATE
     private boolean profileEditMode = false;
@@ -145,6 +148,7 @@ public class CustomerDashboard extends JFrame {
         sidebar.add(section);
         sidebar.add(Box.createVerticalStrut(12));
 
+        sidebar.add(makeNavButton("🏠  Dashboard",        "DASHBOARD"));
         sidebar.add(makeNavButton("👤  My Profile",       "PROFILE"));
         sidebar.add(makeNavButton("📋  Service History",  "HISTORY"));
         sidebar.add(makeNavButton("🛠  Technician Feedback", "TECH_FEEDBACK"));
@@ -160,13 +164,204 @@ public class CustomerDashboard extends JFrame {
         contentPanel  = new JPanel(contentLayout);
         contentPanel.setBackground(BG_DARK);
 
+        contentPanel.add(buildDashboardPanel(), "DASHBOARD");
         contentPanel.add(buildProfilePanel(), "PROFILE");
-        contentPanel.add(buildHistoryPanel(), "HISTORY");
+        historyPanel = buildHistoryPanel();
+        contentPanel.add(historyPanel, "HISTORY");
         contentPanel.add(buildTechnicianFeedbackPanel(), "TECH_FEEDBACK");
         contentPanel.add(buildCommentPanel(), "COMMENT");
 
-        contentLayout.show(contentPanel, "HISTORY");
+        contentLayout.show(contentPanel, "DASHBOARD");
         return contentPanel;
+    }
+
+
+    //  PANEL 0 — DASHBOARD OVERVIEW
+    private JPanel buildDashboardPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 24));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setOpaque(false);
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel welcomeLabel = new JLabel("Welcome back, " + currentCustomer.getFirstName() + " 👋");
+        welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        welcomeLabel.setForeground(TEXT_PRIMARY);
+        welcomeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subtitleLabel = new JLabel("Here's your service overview");
+        subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        subtitleLabel.setForeground(TEXT_MUTED);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        headerPanel.add(welcomeLabel);
+        headerPanel.add(Box.createVerticalStrut(8));
+        headerPanel.add(subtitleLabel);
+
+        String customerID = resolveCustomerID();
+        if (customerID == null || customerID.isBlank()) {
+            JLabel warning = new JLabel(
+                "<html>Unable to load your dashboard because your customer profile ID was not found.<br>" +
+                "Please contact counter staff for assistance.</html>"
+            );
+            warning.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            warning.setForeground(DANGER);
+            warning.setBorder(new EmptyBorder(20, 0, 0, 0));
+            panel.add(headerPanel, BorderLayout.NORTH);
+            panel.add(warning, BorderLayout.CENTER);
+            return panel;
+        }
+
+        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
+        List<Appointment> myAppointments = allAppointments.stream()
+            .filter(a -> customerID.equals(a.getCustomerID()))
+            .collect(Collectors.toList());
+
+        List<Payment> allPayments = FileHandler.loadAllPayments();
+
+        int totalAppointments = myAppointments.size();
+
+        double totalSpent = 0.0;
+        for (Appointment appt : myAppointments) {
+            for (Payment payment : allPayments) {
+                if (payment.getAppointmentID().equals(appt.getAppointmentID())) {
+                    totalSpent += payment.getAmount();
+                }
+            }
+        }
+
+        
+        double outstandingAmount = 0.0;
+        for (Appointment appt : myAppointments) {
+            boolean hasPaid = allPayments.stream()
+                .anyMatch(p -> p.getAppointmentID().equals(appt.getAppointmentID()));
+            if (!hasPaid && "Completed".equals(appt.getStatus())) {
+                double price = FileHandler.getServicePrice(appt.getServiceType());
+                outstandingAmount += price;
+            }
+        }
+
+        String lastVisitDate = "No visits yet";
+        String lastVisitDetails = "";
+        Appointment lastCompletedAppt = myAppointments.stream()
+            .filter(a -> "Completed".equals(a.getStatus()))
+            .sorted((a1, a2) -> a2.getDate().compareTo(a1.getDate()))
+            .findFirst().orElse(null);
+
+        if (lastCompletedAppt != null) {
+            lastVisitDate = lastCompletedAppt.getDate();
+            double lastAmount = allPayments.stream()
+                .filter(p -> p.getAppointmentID().equals(lastCompletedAppt.getAppointmentID()))
+                .mapToDouble(Payment::getAmount)
+                .findFirst().orElse(0.0);
+            lastVisitDetails = String.format("%s · %s",
+                lastCompletedAppt.getTime(),
+                lastCompletedAppt.getServiceType());
+        }
+
+        String nextApptDate = "No upcoming appointments";
+        String nextApptDetails = "";
+        Appointment nextPendingAppt = myAppointments.stream()
+            .filter(a -> "Pending".equals(a.getStatus()))
+            .sorted((a1, a2) -> a1.getDate().compareTo(a2.getDate()))
+            .findFirst().orElse(null);
+
+        if (nextPendingAppt != null) {
+            nextApptDate = nextPendingAppt.getDate();
+            nextApptDetails = String.format("%s · %s",
+                nextPendingAppt.getTime(),
+                nextPendingAppt.getServiceType());
+        }
+
+        JPanel statsGrid = new JPanel(new GridLayout(2, 3, 20, 20));
+        statsGrid.setOpaque(false);
+
+        Color BLUE_ACCENT = new Color(59, 130, 246);
+        Color PINK_ACCENT = ACCENT;
+        Color RED_ACCENT = new Color(239, 68, 68);
+        Color GREEN_ACCENT = new Color(16, 185, 129);
+        Color PURPLE_ACCENT = new Color(139, 92, 246);
+        Color CYAN_ACCENT = new Color(6, 182, 212);
+
+        statsGrid.add(createStatCard("\uD83D\uDCCA", "TOTAL APPOINTMENTS", String.valueOf(totalAppointments),
+            "All time bookings", BLUE_ACCENT, false));
+        statsGrid.add(createStatCard("\uD83D\uDCB0", "TOTAL SPENT", String.format("RM %.2f", totalSpent),
+            totalSpent > 0 ? "Lifetime total" : "No payments recorded yet", PINK_ACCENT, true));
+
+        Color outstandingColor = outstandingAmount > 0 ? RED_ACCENT : GREEN_ACCENT;
+        String outstandingIcon = outstandingAmount > 0 ? "\u26A0" : "\u2705";
+        statsGrid.add(createStatCard(outstandingIcon, "OUTSTANDING PAYMENTS",
+            String.format("RM %.2f", outstandingAmount),
+            outstandingAmount > 0 ? "Unpaid balance" : "All paid up!",
+            outstandingColor, outstandingAmount > 0));
+
+        statsGrid.add(createStatCard("\uD83D\uDD52", "LAST VISIT DATE", lastVisitDate,
+            lastVisitDetails.isEmpty() ? "No completed visits" : lastVisitDetails, PURPLE_ACCENT, false));
+        statsGrid.add(createStatCard("\uD83D\uDCC5", "NEXT APPOINTMENT", nextApptDate,
+            nextApptDetails.isEmpty() ? "No scheduled appointments" : nextApptDetails, CYAN_ACCENT, false));
+
+        JPanel emptyCell = new JPanel();
+        emptyCell.setOpaque(false);
+        statsGrid.add(emptyCell);
+
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(statsGrid, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createStatCard(String icon, String label, String value, String subtitle,
+                                  Color accentColor, boolean highlightValue) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 4, 0, 0, accentColor),
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(24, 24, 24, 24)
+            )
+        ));
+
+        JPanel iconPanel = new JPanel(new BorderLayout());
+        iconPanel.setPreferredSize(new Dimension(56, 56));
+        iconPanel.setMaximumSize(new Dimension(56, 56));
+        iconPanel.setBackground(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 40));
+        iconPanel.setOpaque(true);
+        iconPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel iconLabel = new JLabel(icon, SwingConstants.CENTER);
+        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+        iconLabel.setForeground(new Color(255, 255, 255, 230));
+        iconPanel.add(iconLabel, BorderLayout.CENTER);
+
+        JLabel labelText = new JLabel(label);
+        labelText.setFont(new Font("SansSerif", Font.BOLD, 11));
+        labelText.setForeground(TEXT_MUTED);
+        labelText.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel valueText = new JLabel(value);
+        valueText.setFont(new Font("SansSerif", Font.BOLD, 36));
+        valueText.setForeground(highlightValue ? accentColor : TEXT_PRIMARY);
+        valueText.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subtitleText = new JLabel("<html><body style='width: 220px'>" + subtitle + "</body></html>");
+        subtitleText.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        subtitleText.setForeground(TEXT_MUTED);
+        subtitleText.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(iconPanel);
+        card.add(Box.createVerticalStrut(16));
+        card.add(labelText);
+        card.add(Box.createVerticalStrut(12));
+        card.add(valueText);
+        card.add(Box.createVerticalStrut(8));
+        card.add(subtitleText);
+        card.add(Box.createVerticalGlue());
+
+        return card;
     }
 
 
@@ -912,8 +1107,9 @@ public class CustomerDashboard extends JFrame {
     }
 
     private void refreshHistoryPanel() {
-        contentPanel.remove(1); // index 1 is always HISTORY panel in buildContent
-        contentPanel.add(buildHistoryPanel(), "HISTORY", 1);
+        contentPanel.remove(historyPanel);
+        historyPanel = buildHistoryPanel();
+        contentPanel.add(historyPanel, "HISTORY");
         contentPanel.revalidate();
         contentPanel.repaint();
     }

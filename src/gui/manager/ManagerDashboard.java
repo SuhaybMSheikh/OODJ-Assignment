@@ -1492,19 +1492,19 @@ public class ManagerDashboard extends JFrame {
             new EmptyBorder(6, 10, 6, 10)
         ));
         searchField.setPreferredSize(new Dimension(200, 32));
-        searchField.setText("Search by ID or content...");
+        searchField.setText("Search by ID, From, Service, Content, Date...");
         searchField.setForeground(TEXT_MUTED);
 
         searchField.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(FocusEvent evt) {
-                if (searchField.getText().equals("Search by ID or content...")) {
+                if (searchField.getText().equals("Search by ID, From, Service, Content, Date...")) {
                     searchField.setText("");
                     searchField.setForeground(TEXT_PRIMARY);
                 }
             }
             public void focusLost(FocusEvent evt) {
                 if (searchField.getText().isEmpty()) {
-                    searchField.setText("Search by ID or content...");
+                    searchField.setText("Search by ID, From, Service, Content, Date...");
                     searchField.setForeground(TEXT_MUTED);
                 }
             }
@@ -1518,7 +1518,7 @@ public class ManagerDashboard extends JFrame {
             
             private void updateSearch() {
                 String searchText = searchField.getText();
-                if (searchText.equals("Search by ID or content...") || searchText.isEmpty()) {
+                if (searchText.equals("Search by ID, From, Service, Content, Date...") || searchText.isEmpty()) {
                     applyFeedbackFilters(sorter, model, currentFilter[0], "");
                 } else {
                     applyFeedbackFilters(sorter, model, currentFilter[0], searchText);
@@ -1546,11 +1546,15 @@ public class ManagerDashboard extends JFrame {
             filters.add(javax.swing.RowFilter.regexFilter("^" + typeFilter + "$", 1));
         }
 
-        // Search filter (Appointment ID or Content)
+        // Search filter (Appointment ID, From, Service Type, Content, and Date)
         if (!searchText.isEmpty()) {
             java.util.List<javax.swing.RowFilter<Object, Object>> searchFilters = new java.util.ArrayList<>();
-            searchFilters.add(javax.swing.RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(searchText), 0)); // Apt ID
-            searchFilters.add(javax.swing.RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(searchText), 5)); // Content
+            String pattern = "(?i)" + java.util.regex.Pattern.quote(searchText);
+            searchFilters.add(javax.swing.RowFilter.regexFilter(pattern, 0)); // Apt ID
+            searchFilters.add(javax.swing.RowFilter.regexFilter(pattern, 2)); // From (Technician or Customer ID)
+            searchFilters.add(javax.swing.RowFilter.regexFilter(pattern, 3)); // Service Type
+            searchFilters.add(javax.swing.RowFilter.regexFilter(pattern, 4)); // Content (Feedback or Comment text)
+            searchFilters.add(javax.swing.RowFilter.regexFilter(pattern, 5)); // Date
             filters.add(javax.swing.RowFilter.orFilter(searchFilters));
         }
 

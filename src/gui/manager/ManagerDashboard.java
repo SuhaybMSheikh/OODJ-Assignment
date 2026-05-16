@@ -61,6 +61,7 @@ public class ManagerDashboard extends JFrame {
     // PANELS (one per sidebar section)
     private JPanel profilePanel;
     private JPanel usersPanel;
+    private DefaultTableModel usersTableModel;
     private JPanel pricesPanel;
     private JPanel feedbacksPanel;
     private JPanel reportsPanel;
@@ -590,14 +591,14 @@ public class ManagerDashboard extends JFrame {
 
         // Table
         String[] columns = {"ID", "Username", "Role", "First Name", "Last Name", "Email", "Phone"};
-        DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+        usersTableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
-        JTable table = makeStyledTable(tableModel);
+        JTable table = makeStyledTable(usersTableModel);
 
         // Load data from users.txt into the table
-        refreshUsersTable(tableModel);
+        refreshUsersTable(usersTableModel);
 
         JScrollPane scrollPane = makeScrollPane(table);
 
@@ -610,16 +611,17 @@ public class ManagerDashboard extends JFrame {
         deleteBtn.setForeground(DANGER);
 
         editBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row == -1) { showThemedInfo("Please select a user to edit."); return; }
-            openEditUserDialog((String) tableModel.getValueAt(row, 0), tableModel);
+            int viewRow = table.getSelectedRow();
+            if (viewRow == -1) { showThemedInfo("Please select a user to edit."); return; }
+            int modelRow = table.convertRowIndexToModel(viewRow);
+            openEditUserDialog(modelRow, usersTableModel);
         });
 
         deleteBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row == -1) { showThemedInfo("Please select a user to delete."); return; }
-            String uid = (String) tableModel.getValueAt(row, 0);
-            deleteUser(uid, tableModel);
+            int viewRow = table.getSelectedRow();
+            if (viewRow == -1) { showThemedInfo("Please select a user to delete."); return; }
+            int modelRow = table.convertRowIndexToModel(viewRow);
+            deleteUser(modelRow, usersTableModel);
         });
 
         actionRow.add(editBtn);
@@ -650,7 +652,6 @@ public class ManagerDashboard extends JFrame {
     private void openAddUserDialog() {
         JDialog dialog = new JDialog(this, "Add New User", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setSize(450, 500);
         dialog.setLocationRelativeTo(this);
 
         JPanel panel = new JPanel();
@@ -667,7 +668,7 @@ public class ManagerDashboard extends JFrame {
         usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(usernameField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Password
         panel.add(createFormLabel("Password"));
@@ -678,7 +679,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(passwordField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Role
         panel.add(createFormLabel("Role"));
@@ -688,7 +689,7 @@ public class ManagerDashboard extends JFrame {
         roleCombo.setForeground(TEXT_PRIMARY);
         roleCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(roleCombo);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // First Name
         panel.add(createFormLabel("First Name"));
@@ -699,7 +700,7 @@ public class ManagerDashboard extends JFrame {
         firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         firstNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(firstNameField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Last Name
         panel.add(createFormLabel("Last Name"));
@@ -710,7 +711,7 @@ public class ManagerDashboard extends JFrame {
         lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         lastNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(lastNameField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Email
         panel.add(createFormLabel("Email"));
@@ -721,7 +722,7 @@ public class ManagerDashboard extends JFrame {
         emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
         emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(emailField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Phone
         panel.add(createFormLabel("Phone"));
@@ -732,7 +733,6 @@ public class ManagerDashboard extends JFrame {
         phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
         phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(phoneField);
-        panel.add(Box.createVerticalStrut(20));
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -770,45 +770,52 @@ public class ManagerDashboard extends JFrame {
                 FileHandler.addTechnicianMapping(newID, username, firstName, lastName);
             }
 
-            DefaultTableModel tableModel = (DefaultTableModel) ((JTable) ((JScrollPane) ((JPanel) contentPanel.getComponent(0)).getComponent(1)).getViewport().getComponent(0)).getModel();
-            refreshUsersTable(tableModel);
+            refreshUsersTable(usersTableModel);
 
-            showThemedInfo("User added successfully!");
             dialog.dispose();
+            showThemedInfo("User Added Successfully!");
         });
+
+        wireEnterToNextField(usernameField, passwordField);
+        wireEnterToNextField(passwordField, roleCombo);
+        wireEnterToNextField(roleCombo, firstNameField);
+        wireEnterToNextField(firstNameField, lastNameField);
+        wireEnterToNextField(lastNameField, emailField);
+        wireEnterToNextField(emailField, phoneField);
+        phoneField.addActionListener(e -> saveBtn.doClick());
+
+        dialog.getRootPane().setDefaultButton(saveBtn);
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(saveBtn);
+        buttonPanel.setBorder(new EmptyBorder(8, 20, 16, 20));
 
-        JScrollPane scrollPane = new JScrollPane(panel);
-        scrollPane.setBackground(BG_DARK);
-        scrollPane.getViewport().setBackground(BG_DARK);
-        scrollPane.setBorder(null);
-
-        // Add scrollPane and buttons to dialog
         JPanel contentPane = new JPanel(new BorderLayout());
         contentPane.setBackground(BG_DARK);
-        contentPane.add(scrollPane, BorderLayout.CENTER);
+        contentPane.add(panel, BorderLayout.CENTER);
         contentPane.add(buttonPanel, BorderLayout.SOUTH);
         dialog.add(contentPane);
+        dialog.pack();
+        dialog.setSize(Math.max(dialog.getWidth(), 480), dialog.getHeight());
         dialog.setVisible(true);
+        SwingUtilities.invokeLater(usernameField::requestFocusInWindow);
     }
 
     /**
      * Opens the Edit User dialog. Pre-fills with existing data, role is locked.
+     * Uses the table model row index so the correct row is edited when duplicate IDs exist.
      */
-    private void openEditUserDialog(String userID, DefaultTableModel model) {
+    private void openEditUserDialog(int modelRow, DefaultTableModel model) {
         List<User> users = FileHandler.loadAllUsers();
-        User targetUser = users.stream().filter(u -> u.getUserID().equals(userID)).findFirst().orElse(null);
-        
-        if (targetUser == null) {
+        if (modelRow < 0 || modelRow >= users.size()) {
             showThemedInfo("User not found.");
             return;
         }
+        User targetUser = users.get(modelRow);
+        final int userIndex = modelRow;
 
         JDialog dialog = new JDialog(this, "Edit User", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setSize(450, 500);
         dialog.setLocationRelativeTo(this);
 
         JPanel panel = new JPanel();
@@ -826,7 +833,7 @@ public class ManagerDashboard extends JFrame {
         idField.setEditable(false);
         idField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(idField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Username
         panel.add(createFormLabel("Username"));
@@ -837,7 +844,7 @@ public class ManagerDashboard extends JFrame {
         usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(usernameField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Password
         panel.add(createFormLabel("Password"));
@@ -848,7 +855,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(passwordField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Role (read-only)
         panel.add(createFormLabel("Role (locked)"));
@@ -860,7 +867,7 @@ public class ManagerDashboard extends JFrame {
         roleField.setEditable(false);
         roleField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(roleField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // First Name
         panel.add(createFormLabel("First Name"));
@@ -871,7 +878,7 @@ public class ManagerDashboard extends JFrame {
         firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         firstNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(firstNameField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Last Name
         panel.add(createFormLabel("Last Name"));
@@ -882,7 +889,7 @@ public class ManagerDashboard extends JFrame {
         lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         lastNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(lastNameField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Email
         panel.add(createFormLabel("Email"));
@@ -893,7 +900,7 @@ public class ManagerDashboard extends JFrame {
         emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
         emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(emailField);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(Box.createVerticalStrut(8));
 
         // Phone
         panel.add(createFormLabel("Phone"));
@@ -904,7 +911,6 @@ public class ManagerDashboard extends JFrame {
         phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
         phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(phoneField);
-        panel.add(Box.createVerticalStrut(20));
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -928,44 +934,60 @@ public class ManagerDashboard extends JFrame {
                 return;
             }
 
-            // Update user
-            targetUser.setUsername(username);
-            targetUser.setPassword(password);
-            targetUser.setFirstName(firstName);
-            targetUser.setLastName(lastName);
-            targetUser.setEmail(email);
-            targetUser.setPhone(phone);
+            List<User> usersToSave = FileHandler.loadAllUsers();
+            if (userIndex < 0 || userIndex >= usersToSave.size()) {
+                showThemedInfo("User not found.");
+                return;
+            }
+            User userToUpdate = usersToSave.get(userIndex);
+            userToUpdate.setUsername(username);
+            userToUpdate.setPassword(password);
+            userToUpdate.setFirstName(firstName);
+            userToUpdate.setLastName(lastName);
+            userToUpdate.setEmail(email);
+            userToUpdate.setPhone(phone);
 
-            FileHandler.saveAllUsers(users);
+            FileHandler.saveAllUsers(usersToSave);
+
+            if ("Technician".equals(userToUpdate.getRole())) {
+                FileHandler.updateTechnicianMapping(userToUpdate.getUserID(), username, firstName, lastName);
+            }
+
             refreshUsersTable(model);
 
-            showThemedInfo("User updated successfully!");
             dialog.dispose();
+            showThemedInfo("User updated successfully!");
         });
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(saveBtn);
+        buttonPanel.setBorder(new EmptyBorder(8, 20, 16, 20));
 
-        JScrollPane scrollPane = new JScrollPane(panel);
-        scrollPane.setBackground(BG_DARK);
-        scrollPane.getViewport().setBackground(BG_DARK);
-        scrollPane.setBorder(null);
-
-        // Add scrollPane and buttons to dialog
         JPanel contentPane = new JPanel(new BorderLayout());
         contentPane.setBackground(BG_DARK);
-        contentPane.add(scrollPane, BorderLayout.CENTER);
+        contentPane.add(panel, BorderLayout.CENTER);
         contentPane.add(buttonPanel, BorderLayout.SOUTH);
         dialog.add(contentPane);
+        dialog.pack();
+        dialog.setSize(Math.max(dialog.getWidth(), 480), dialog.getHeight());
         dialog.setVisible(true);
     }
 
     /**
      * Deletes a user with confirmation. Prevents self-deletion.
+     * Uses the table model row index so the correct row is removed when duplicate IDs exist.
      */
-    private void deleteUser(String userID, DefaultTableModel model) {
-        // Prevent self-deletion
-        if (userID.equals(currentManager.getUserID())) {
+    private void deleteUser(int modelRow, DefaultTableModel model) {
+        List<User> users = FileHandler.loadAllUsers();
+        if (modelRow < 0 || modelRow >= users.size()) {
+            showThemedInfo("User not found.");
+            return;
+        }
+        User userToDelete = users.get(modelRow);
+
+        // Prevent self-deletion (match ID and username in case IDs are duplicated in data)
+        if (userToDelete.getUserID().equals(currentManager.getUserID())
+                && userToDelete.getUsername().equals(currentManager.getUsername())) {
             showThemedInfo("You cannot delete your own account!");
             return;
         }
@@ -975,15 +997,12 @@ public class ManagerDashboard extends JFrame {
 
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        List<User> users = FileHandler.loadAllUsers();
-        User userToDelete = users.stream().filter(u -> u.getUserID().equals(userID)).findFirst().orElse(null);
-        
-        users.removeIf(u -> u.getUserID().equals(userID));
+        users.remove(modelRow);
         FileHandler.saveAllUsers(users);
 
         // If a Technician is deleted, also remove from technicians.txt
-        if (userToDelete != null && "Technician".equals(userToDelete.getRole())) {
-            FileHandler.removeTechnicianMapping(userID);
+        if ("Technician".equals(userToDelete.getRole())) {
+            FileHandler.removeTechnicianMapping(userToDelete.getUserID());
         }
 
         refreshUsersTable(model);
@@ -1046,6 +1065,24 @@ public class ManagerDashboard extends JFrame {
         // Align label text with text inside input fields (matches field left padding = 8)
         label.setBorder(new EmptyBorder(0, 8, 4, 0));
         return label;
+    }
+
+    /** Press Enter in a text field to move focus to the next input. */
+    private void wireEnterToNextField(JTextField field, JComponent next) {
+        field.addActionListener(e -> next.requestFocusInWindow());
+    }
+
+    /** Press Enter on a combo box to move focus to the next input. */
+    private void wireEnterToNextField(JComboBox<?> combo, JComponent next) {
+        combo.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    next.requestFocusInWindow();
+                    e.consume();
+                }
+            }
+        });
     }
 
 

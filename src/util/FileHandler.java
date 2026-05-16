@@ -593,6 +593,47 @@ public class FileHandler {
     }
 
     /**
+     * Updates an existing technician mapping in technicians.txt (username, first/last name).
+     * Keeps the same technician ID and user ID. If no mapping exists, adds one.
+     */
+    public static void updateTechnicianMapping(String userID, String username, String firstName, String lastName) {
+        List<String> lines = new ArrayList<>();
+        boolean updated = false;
+        try (BufferedReader reader = new BufferedReader(new FileReader(TECHNICIANS_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) continue;
+                String[] parts = trimmed.split("\\|");
+                if (!updated && parts.length >= 2 && parts[1].equals(userID)) {
+                    String techID = parts[0];
+                    lines.add(techID + "|" + userID + "|" + username + "|" + firstName + "|" + lastName);
+                    updated = true;
+                } else {
+                    lines.add(trimmed);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading technicians file: " + e.getMessage());
+            return;
+        }
+
+        if (!updated) {
+            addTechnicianMapping(userID, username, firstName, lastName);
+            return;
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TECHNICIANS_FILE))) {
+            for (String l : lines) {
+                writer.write(l);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error updating technicians file: " + e.getMessage());
+        }
+    }
+
+    /**
      * Removes a technician mapping from technicians.txt based on user ID
      * Called when a Technician user is deleted
      */

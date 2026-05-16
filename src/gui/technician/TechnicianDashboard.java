@@ -18,7 +18,6 @@ import util.Session;
 
 /**
  * GUI CLASS — TechnicianDashboard
- * MEMBER 4 features:
  *   [1] Edit own profile (first/last name, username, email, phone, password)
  *   [2] View appointments assigned to THIS technician
  *   [3] Click an appointment to see full details + customer comments

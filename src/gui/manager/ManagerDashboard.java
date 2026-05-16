@@ -1613,45 +1613,70 @@ public class ManagerDashboard extends JFrame {
     //  PANEL 4 — REPORTS
     //  Comprehensive analytics with multiple tabs, charts, and detailed breakdowns
     private JPanel buildReportsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+        panel.setBorder(new EmptyBorder(16, 20, 16, 20));
 
         JLabel heading = new JLabel("Analysed Reports");
-        heading.setFont(new Font("SansSerif", Font.BOLD, 22));
+        heading.setFont(new Font("SansSerif", Font.BOLD, 20));
         heading.setForeground(TEXT_PRIMARY);
 
-        // Quick summary cards row
-        JPanel statsRow = new JPanel(new GridLayout(1, 3, 16, 0));
+        JPanel statsRow = new JPanel(new GridLayout(1, 3, 10, 0));
         statsRow.setOpaque(false);
+        statsRow.setPreferredSize(new Dimension(0, 72));
+        statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
 
-        // Calculate stats from file data
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         long totalAppointments = allAppointments.size();
         long completed = allAppointments.stream()
             .filter(a -> "Completed".equals(a.getStatus())).count();
         double totalRevenue = calculateTotalRevenue();
 
-        statsRow.add(makeStatCard("Total Appointments", String.valueOf(totalAppointments), ACCENT));
-        statsRow.add(makeStatCard("Completed",          String.valueOf(completed),         SUCCESS));
-        statsRow.add(makeStatCard("Total Revenue",      String.format("RM %.2f", totalRevenue), new Color(245, 158, 11)));
+        statsRow.add(makeCompactStatCard("Total Appointments", String.valueOf(totalAppointments), ACCENT));
+        statsRow.add(makeCompactStatCard("Completed", String.valueOf(completed), SUCCESS));
+        statsRow.add(makeCompactStatCard("Total Revenue", String.format("RM %.2f", totalRevenue), new Color(245, 158, 11)));
 
-        // Tabbed reports
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setBackground(BG_CARD);
-        tabbedPane.setForeground(TEXT_PRIMARY);
-        tabbedPane.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        JPanel headerBlock = new JPanel(new BorderLayout(0, 10));
+        headerBlock.setOpaque(false);
+        headerBlock.add(heading, BorderLayout.NORTH);
+        headerBlock.add(statsRow, BorderLayout.CENTER);
 
-        tabbedPane.addTab("Overview", buildReportsOverviewPanel());
-        tabbedPane.addTab("By Service Type", buildAppointmentsByServicePanel());
-        tabbedPane.addTab("Revenue Analysis", buildRevenueAnalysisPanel());
-        tabbedPane.addTab("Top Technicians", buildTopTechniciansPanel());
-        tabbedPane.addTab("Customer Metrics", buildCustomerMetricsPanel());
+        JTabbedPane tabbedPane = createReportsTabbedPane();
+        tabbedPane.addTab("Overview", wrapReportsTab(buildReportsOverviewPanel()));
+        tabbedPane.addTab("By Service Type", wrapReportsTab(buildAppointmentsByServicePanel()));
+        tabbedPane.addTab("Revenue Analysis", wrapReportsTab(buildRevenueAnalysisPanel()));
+        tabbedPane.addTab("Top Technicians", wrapReportsTab(buildTopTechniciansPanel()));
+        tabbedPane.addTab("Customer Metrics", wrapReportsTab(buildCustomerMetricsPanel()));
 
-        panel.add(heading,   BorderLayout.NORTH);
-        panel.add(statsRow,  BorderLayout.WEST);
+        panel.add(headerBlock, BorderLayout.NORTH);
         panel.add(tabbedPane, BorderLayout.CENTER);
         return panel;
+    }
+
+    private JTabbedPane createReportsTabbedPane() {
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setBackground(BG_DARK);
+        tabbedPane.setForeground(TEXT_PRIMARY);
+        tabbedPane.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        tabbedPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
+        return tabbedPane;
+    }
+
+    private JPanel wrapReportsTab(JComponent content) {
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(BG_DARK);
+        wrapper.setBorder(new EmptyBorder(6, 8, 8, 8));
+        wrapper.add(content, BorderLayout.CENTER);
+        return wrapper;
+    }
+
+    private JScrollPane makeReportsTableScroll(JTable table) {
+        table.setRowHeight(30);
+        table.setFillsViewportHeight(true);
+        JScrollPane scroll = makeScrollPane(table);
+        scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        return scroll;
     }
 
     /** Helper: Calculate total revenue based on service types and prices */
@@ -1731,11 +1756,9 @@ public class ManagerDashboard extends JFrame {
 
     /** Overview tab with status distribution pie chart */
     private JPanel buildReportsOverviewPanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 24, 0));
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
-        // Left: Appointment status pie chart
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         long pending = allAppointments.stream().filter(a -> "Pending".equals(a.getStatus())).count();
         long completedCount = allAppointments.stream().filter(a -> "Completed".equals(a.getStatus())).count();
@@ -1747,22 +1770,22 @@ public class ManagerDashboard extends JFrame {
         panel.add(createPieChartPanel("Appointment Status", statusData, new Color[]{
             new Color(245, 158, 11),
             SUCCESS
-        }));
+        }), BorderLayout.WEST);
 
-        // Right: Completion rate and summary
         JPanel summaryPanel = new JPanel();
         summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
         summaryPanel.setBackground(BG_CARD);
         summaryPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(20, 20, 20, 20)
+            new EmptyBorder(14, 16, 14, 16)
         ));
 
         JLabel summaryTitle = new JLabel("Summary Statistics");
-        summaryTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        summaryTitle.setFont(new Font("SansSerif", Font.BOLD, 13));
         summaryTitle.setForeground(TEXT_PRIMARY);
+        summaryTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         summaryPanel.add(summaryTitle);
-        summaryPanel.add(Box.createVerticalStrut(16));
+        summaryPanel.add(Box.createVerticalStrut(10));
 
         long totalApts = allAppointments.size();
         double completionRate = totalApts > 0 ? (completedCount * 100.0 / totalApts) : 0;
@@ -1774,22 +1797,18 @@ public class ManagerDashboard extends JFrame {
         addSummaryRow(summaryPanel, "Completion Rate:", String.format("%.1f%%", completionRate));
         addSummaryRow(summaryPanel, "Unique Customers:", String.valueOf(uniqueCustomers));
 
-        summaryPanel.add(Box.createVerticalGlue());
-        panel.add(summaryPanel);
+        panel.add(summaryPanel, BorderLayout.CENTER);
         return panel;
     }
 
     /** Service Type tab with breakdown table and pie chart */
     private JPanel buildAppointmentsByServicePanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 24, 0));
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
-        // Get dynamic service counts and revenue
         java.util.Map<String, Integer> serviceCount = getServiceCounts();
         java.util.Map<String, Double> serviceRevenue = getRevenueByService();
 
-        // Left: Table with details
         String[] columns = {"Service Type", "Count", "Revenue", "Percentage"};
         DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -1809,35 +1828,31 @@ public class ManagerDashboard extends JFrame {
         }
 
         JTable table = makeStyledTable(tableModel);
-        table.getColumnModel().getColumn(1).setPreferredWidth(80);
-        table.getColumnModel().getColumn(2).setPreferredWidth(120);
-        panel.add(makeScrollPane(table));
+        table.getColumnModel().getColumn(1).setPreferredWidth(70);
+        table.getColumnModel().getColumn(2).setPreferredWidth(100);
+        panel.add(makeReportsTableScroll(table), BorderLayout.CENTER);
 
-        // Right: Pie chart
         java.util.Map<String, Long> serviceCountLong = new java.util.LinkedHashMap<>();
         for (var e : serviceCount.entrySet()) {
             serviceCountLong.put(e.getKey(), e.getValue().longValue());
         }
-        panel.add(createPieChartPanel("Services Distribution", 
-            serviceCountLong, 
-            new Color[]{ACCENT, new Color(139, 92, 246)}));
+        panel.add(createPieChartPanel("Services Distribution",
+            serviceCountLong,
+            new Color[]{ACCENT, new Color(139, 92, 246)}), BorderLayout.EAST);
 
         return panel;
     }
 
     /** Revenue Analysis tab with bar chart and monthly trends */
     private JPanel buildRevenueAnalysisPanel() {
-        JPanel panel = new JPanel(new GridLayout(2, 1, 0, 24));
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
-        // Aggregate revenue by month from appointments and service prices
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         java.util.Map<String, Double> servicePrices = FileHandler.loadAllServices();
         java.util.Map<String, Double> monthlyRevenue = new java.util.LinkedHashMap<>();
         java.util.Map<String, Integer> monthlyCounts = new java.util.LinkedHashMap<>();
 
-        // Pre-create last 6 months + current month (chronological order)
         for (int i = 6; i >= 0; i--) {
             java.util.Calendar cal = java.util.Calendar.getInstance();
             cal.add(java.util.Calendar.MONTH, -i);
@@ -1860,10 +1875,9 @@ public class ManagerDashboard extends JFrame {
                         monthlyCounts.put(monthKey, monthlyCounts.get(monthKey) + 1);
                     }
                 }
-            } catch (Exception e) {}
+            } catch (Exception ignored) {}
         }
 
-        // Top: Revenue table
         String[] columns = {"Month", "Revenue", "Appointments"};
         DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -1876,10 +1890,14 @@ public class ManagerDashboard extends JFrame {
         }
 
         JTable table = makeStyledTable(tableModel);
-        panel.add(makeScrollPane(table));
+        table.getColumnModel().getColumn(0).setPreferredWidth(130);
+        JPanel tablePane = new JPanel(new BorderLayout());
+        tablePane.setBackground(BG_DARK);
+        tablePane.setPreferredSize(new Dimension(280, 0));
+        tablePane.add(makeReportsTableScroll(table), BorderLayout.CENTER);
+        panel.add(tablePane, BorderLayout.WEST);
 
-        // Bottom: Bar chart
-        panel.add(createBarChartPanel("Monthly Revenue Trend", monthlyRevenue));
+        panel.add(createBarChartPanel("Monthly Revenue Trend", monthlyRevenue), BorderLayout.CENTER);
         return panel;
     }
 
@@ -1887,9 +1905,7 @@ public class ManagerDashboard extends JFrame {
     private JPanel buildTopTechniciansPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
-        // Aggregate data by technician
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         java.util.Map<String, Integer> techAppointments = new java.util.LinkedHashMap<>();
         java.util.Map<String, Double> techRevenue = getRevenueByTechnician();
@@ -1923,8 +1939,8 @@ public class ManagerDashboard extends JFrame {
         }
 
         JTable table = makeStyledTable(tableModel);
-        table.getColumnModel().getColumn(0).setPreferredWidth(120);
-        panel.add(makeScrollPane(table), BorderLayout.CENTER);
+        table.getColumnModel().getColumn(0).setPreferredWidth(110);
+        panel.add(makeReportsTableScroll(table), BorderLayout.CENTER);
         return panel;
     }
 
@@ -1932,9 +1948,7 @@ public class ManagerDashboard extends JFrame {
     private JPanel buildCustomerMetricsPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
-        // Aggregate data by customer
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         java.util.Map<String, Integer> customerAppointments = new java.util.LinkedHashMap<>();
         java.util.Map<String, Double> customerSpent = getSpendingByCustomer();
@@ -1966,8 +1980,8 @@ public class ManagerDashboard extends JFrame {
         }
 
         JTable table = makeStyledTable(tableModel);
-        table.getColumnModel().getColumn(0).setPreferredWidth(120);
-        panel.add(makeScrollPane(table), BorderLayout.CENTER);
+        table.getColumnModel().getColumn(0).setPreferredWidth(110);
+        panel.add(makeReportsTableScroll(table), BorderLayout.CENTER);
         return panel;
     }
 
@@ -1975,7 +1989,8 @@ public class ManagerDashboard extends JFrame {
     private void addSummaryRow(JPanel panel, String label, String value) {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
-        row.setBorder(new EmptyBorder(8, 0, 8, 0));
+        row.setBorder(new EmptyBorder(4, 0, 4, 0));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
 
         JLabel lblLabel = new JLabel(label);
         lblLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -1992,20 +2007,18 @@ public class ManagerDashboard extends JFrame {
 
     /** Creates a pie chart panel with custom rendering */
     private JPanel createPieChartPanel(String title, java.util.Map<String, Long> data, Color[] colors) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JPanel panel = new JPanel(new BorderLayout(0, 6));
         panel.setBackground(BG_CARD);
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(16, 16, 16, 16)
+            new EmptyBorder(10, 12, 10, 12)
         ));
+        panel.setPreferredSize(new Dimension(300, 0));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
         titleLabel.setForeground(TEXT_PRIMARY);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(titleLabel, BorderLayout.NORTH);
 
         JPanel chartArea = new JPanel() {
             @Override protected void paintComponent(Graphics g) {
@@ -2013,46 +2026,51 @@ public class ManagerDashboard extends JFrame {
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                int size = Math.min(getWidth(), getHeight()) - 20;
+                long total = data.values().stream().mapToLong(Long::longValue).sum();
+                if (total <= 0) {
+                    g2.setColor(TEXT_MUTED);
+                    g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+                    String msg = "No data";
+                    g2.drawString(msg, (getWidth() - g2.getFontMetrics().stringWidth(msg)) / 2, getHeight() / 2);
+                    return;
+                }
+
+                int size = Math.min(getWidth(), getHeight()) - 16;
+                size = Math.max(size, 40);
                 int x = (getWidth() - size) / 2;
                 int y = (getHeight() - size) / 2;
 
-                long total = data.values().stream().mapToLong(Long::longValue).sum();
                 double angle = 0;
                 int colorIdx = 0;
-
                 for (Long value : data.values()) {
-                    double percentage = (double) value / total;
-                    double arcAngle = percentage * 360;
-
+                    double arcAngle = (value * 360.0) / total;
                     g2.setColor(colors[colorIdx % colors.length]);
-                    g2.fillArc(x, y, size, size, (int) angle, (int) arcAngle);
-
+                    g2.fillArc(x, y, size, size, (int) angle, (int) Math.max(arcAngle, 1));
                     colorIdx++;
                     angle += arcAngle;
                 }
 
-                // Draw border
                 g2.setColor(BORDER_COLOR);
-                g2.setStroke(new java.awt.BasicStroke(2));
+                g2.setStroke(new BasicStroke(2));
                 g2.drawOval(x, y, size, size);
             }
         };
         chartArea.setBackground(BG_DARK);
-        chartArea.setPreferredSize(new Dimension(200, 200));
-        panel.add(chartArea);
-        panel.add(Box.createVerticalStrut(12));
+        chartArea.setMinimumSize(new Dimension(100, 100));
+        panel.add(chartArea, BorderLayout.CENTER);
 
-        // Legend
+        JPanel legendPanel = new JPanel();
+        legendPanel.setLayout(new BoxLayout(legendPanel, BoxLayout.Y_AXIS));
+        legendPanel.setOpaque(false);
         int idx = 0;
         for (String label : data.keySet()) {
-            JPanel legendRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            JPanel legendRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
             legendRow.setOpaque(false);
             legendRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
             JPanel colorBox = new JPanel();
             colorBox.setBackground(colors[idx % colors.length]);
-            colorBox.setPreferredSize(new Dimension(12, 12));
+            colorBox.setPreferredSize(new Dimension(10, 10));
             colorBox.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
 
             JLabel legendLabel = new JLabel(label + ": " + data.get(label));
@@ -2061,30 +2079,26 @@ public class ManagerDashboard extends JFrame {
 
             legendRow.add(colorBox);
             legendRow.add(legendLabel);
-            panel.add(legendRow);
+            legendPanel.add(legendRow);
             idx++;
         }
-
-        panel.add(Box.createVerticalGlue());
+        panel.add(legendPanel, BorderLayout.SOUTH);
         return panel;
     }
 
     /** Creates a bar chart panel with custom rendering */
     private JPanel createBarChartPanel(String title, java.util.Map<String, Double> data) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JPanel panel = new JPanel(new BorderLayout(0, 6));
         panel.setBackground(BG_CARD);
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(16, 16, 16, 16)
+            new EmptyBorder(10, 12, 10, 12)
         ));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
         titleLabel.setForeground(TEXT_PRIMARY);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(12));
+        panel.add(titleLabel, BorderLayout.NORTH);
 
         JPanel chartArea = new JPanel() {
             @Override protected void paintComponent(Graphics g) {
@@ -2094,49 +2108,82 @@ public class ManagerDashboard extends JFrame {
 
                 if (data.isEmpty()) return;
 
-                int padding = 40;
-                int width = getWidth() - padding * 2;
-                int height = getHeight() - padding * 2;
-                int barCount = data.size();
-                int barWidth = (width - 20) / barCount;
-                int spacing = 20 / barCount;
+                int paddingLeft = 36;
+                int paddingBottom = 52;
+                int paddingTop = 16;
+                int paddingRight = 12;
+                int width = getWidth() - paddingLeft - paddingRight;
+                int height = getHeight() - paddingTop - paddingBottom;
+                if (width <= 0 || height <= 0) return;
+
+                int barCount = Math.max(data.size(), 1);
+                int spacing = Math.max(4, width / (barCount * 8));
+                int barWidth = Math.max(8, (width - spacing * (barCount + 1)) / barCount);
 
                 double maxValue = data.values().stream().mapToDouble(Double::doubleValue).max().orElse(1.0);
+                if (maxValue <= 0) maxValue = 1.0;
 
-                // Draw axes
+                int baseY = getHeight() - paddingBottom;
                 g2.setColor(BORDER_COLOR);
-                g2.setStroke(new java.awt.BasicStroke(2));
-                g2.drawLine(padding, getHeight() - padding, getWidth() - padding, getHeight() - padding);
-                g2.drawLine(padding, padding, padding, getHeight() - padding);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawLine(paddingLeft, baseY, getWidth() - paddingRight, baseY);
+                g2.drawLine(paddingLeft, paddingTop, paddingLeft, baseY);
 
-                // Draw bars and labels
                 int barIndex = 0;
+                g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
                 for (String label : data.keySet()) {
                     double value = data.get(label);
                     int barHeight = (int) ((value / maxValue) * height);
-                    int x = padding + barIndex * (barWidth + spacing);
-                    int y = getHeight() - padding - barHeight;
+                    int x = paddingLeft + spacing + barIndex * (barWidth + spacing);
+                    int y = baseY - barHeight;
 
-                    // Draw bar
                     g2.setColor(ACCENT);
                     g2.fillRect(x, y, barWidth, barHeight);
 
-                    // Draw value label
                     g2.setColor(TEXT_PRIMARY);
-                    g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
                     String valueStr = String.format("RM %.0f", value);
-                    java.awt.FontMetrics fm = g2.getFontMetrics();
-                    g2.drawString(valueStr, x + (barWidth - fm.stringWidth(valueStr)) / 2, y - 5);
+                    FontMetrics fm = g2.getFontMetrics();
+                    if (barHeight > 14) {
+                        g2.drawString(valueStr, x + (barWidth - fm.stringWidth(valueStr)) / 2, y - 4);
+                    }
+
+                    String shortLabel = label.length() > 8 ? label.substring(0, 7) + "." : label;
+                    g2.setColor(TEXT_MUTED);
+                    g2.drawString(shortLabel, x + (barWidth - fm.stringWidth(shortLabel)) / 2, baseY + fm.getHeight() + 2);
 
                     barIndex++;
                 }
             }
         };
         chartArea.setBackground(BG_DARK);
-        chartArea.setPreferredSize(new Dimension(600, 250));
-        panel.add(chartArea);
-        panel.add(Box.createVerticalGlue());
+        chartArea.setMinimumSize(new Dimension(200, 120));
+        panel.add(chartArea, BorderLayout.CENTER);
         return panel;
+    }
+
+    private JPanel makeCompactStatCard(String label, String value, Color valueColor) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(10, 14, 10, 14)
+        ));
+
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        lbl.setForeground(TEXT_MUTED);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel val = new JLabel(value);
+        val.setFont(new Font("SansSerif", Font.BOLD, 20));
+        val.setForeground(valueColor);
+        val.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(lbl);
+        card.add(Box.createVerticalStrut(4));
+        card.add(val);
+        return card;
     }
 
     private JPanel makeStatCard(String label, String value, Color valueColor) {

@@ -681,6 +681,7 @@ public class ManagerDashboard extends JFrame {
         usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         usernameField.setBackground(BG_CARD);
         usernameField.setForeground(TEXT_PRIMARY);
+        usernameField.setCaretColor(TEXT_PRIMARY);
         usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(usernameField);
@@ -692,6 +693,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         passwordField.setBackground(BG_CARD);
         passwordField.setForeground(TEXT_PRIMARY);
+        passwordField.setCaretColor(TEXT_PRIMARY);
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(passwordField);
@@ -713,6 +715,7 @@ public class ManagerDashboard extends JFrame {
         firstNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         firstNameField.setBackground(BG_CARD);
         firstNameField.setForeground(TEXT_PRIMARY);
+        firstNameField.setCaretColor(TEXT_PRIMARY);
         firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         firstNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(firstNameField);
@@ -724,6 +727,7 @@ public class ManagerDashboard extends JFrame {
         lastNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         lastNameField.setBackground(BG_CARD);
         lastNameField.setForeground(TEXT_PRIMARY);
+        lastNameField.setCaretColor(TEXT_PRIMARY);
         lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         lastNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(lastNameField);
@@ -735,6 +739,7 @@ public class ManagerDashboard extends JFrame {
         emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         emailField.setBackground(BG_CARD);
         emailField.setForeground(TEXT_PRIMARY);
+        emailField.setCaretColor(TEXT_PRIMARY);
         emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
         emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(emailField);
@@ -746,6 +751,7 @@ public class ManagerDashboard extends JFrame {
         phoneField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         phoneField.setBackground(BG_CARD);
         phoneField.setForeground(TEXT_PRIMARY);
+        phoneField.setCaretColor(TEXT_PRIMARY);
         phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
         phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(phoneField);
@@ -857,6 +863,7 @@ public class ManagerDashboard extends JFrame {
         usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         usernameField.setBackground(BG_CARD);
         usernameField.setForeground(TEXT_PRIMARY);
+        usernameField.setCaretColor(TEXT_PRIMARY);
         usernameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(usernameField);
@@ -868,6 +875,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         passwordField.setBackground(BG_CARD);
         passwordField.setForeground(TEXT_PRIMARY);
+        passwordField.setCaretColor(TEXT_PRIMARY);
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(passwordField);
@@ -891,6 +899,7 @@ public class ManagerDashboard extends JFrame {
         firstNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         firstNameField.setBackground(BG_CARD);
         firstNameField.setForeground(TEXT_PRIMARY);
+        firstNameField.setCaretColor(TEXT_PRIMARY);
         firstNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         firstNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(firstNameField);
@@ -902,6 +911,7 @@ public class ManagerDashboard extends JFrame {
         lastNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         lastNameField.setBackground(BG_CARD);
         lastNameField.setForeground(TEXT_PRIMARY);
+        lastNameField.setCaretColor(TEXT_PRIMARY);
         lastNameField.setBorder(new EmptyBorder(8, 8, 8, 8));
         lastNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(lastNameField);
@@ -913,6 +923,7 @@ public class ManagerDashboard extends JFrame {
         emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         emailField.setBackground(BG_CARD);
         emailField.setForeground(TEXT_PRIMARY);
+        emailField.setCaretColor(TEXT_PRIMARY);
         emailField.setBorder(new EmptyBorder(8, 8, 8, 8));
         emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(emailField);
@@ -924,6 +935,7 @@ public class ManagerDashboard extends JFrame {
         phoneField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         phoneField.setBackground(BG_CARD);
         phoneField.setForeground(TEXT_PRIMARY);
+        phoneField.setCaretColor(TEXT_PRIMARY);
         phoneField.setBorder(new EmptyBorder(8, 8, 8, 8));
         phoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(phoneField);
@@ -1350,6 +1362,7 @@ public class ManagerDashboard extends JFrame {
             durationField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
             durationField.setBackground(BG_CARD2);
             durationField.setForeground(TEXT_PRIMARY);
+            durationField.setCaretColor(TEXT_PRIMARY);
             durationField.setFont(new Font("SansSerif", Font.PLAIN, 12));
             durationField.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDER_COLOR),
@@ -1373,6 +1386,7 @@ public class ManagerDashboard extends JFrame {
             priceField.setMaximumSize(new Dimension(100, 28));
             priceField.setBackground(BG_CARD2);
             priceField.setForeground(ACCENT);
+            priceField.setCaretColor(TEXT_PRIMARY);
             priceField.setFont(new Font("SansSerif", Font.BOLD, 14));
             priceField.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDER_COLOR),

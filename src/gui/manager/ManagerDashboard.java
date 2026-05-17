@@ -59,6 +59,11 @@ public class ManagerDashboard extends JFrame {
     private JPanel     contentPanel;
 
     // PANELS (one per sidebar section)
+    private JPanel homePanel;
+    private JLabel homeAppointmentsValue;
+    private JLabel homePendingValue;
+    private JLabel homeStaffValue;
+    private JLabel homeFeedbackValue;
     private JPanel profilePanel;
     private JPanel usersPanel;
     private DefaultTableModel usersTableModel;
@@ -70,8 +75,8 @@ public class ManagerDashboard extends JFrame {
     private boolean pricesEditing = false;
     private Runnable pricesCancelAction = null;
 
-    // TOP BAR COMPONENT (stored for updating)
-    private JLabel topBarUserLabel;
+    // TOP BAR COMPONENT (stored for updating; opens profile when clicked)
+    private JButton topBarProfileBtn;
 
     // PROFILE PANEL STATE
     private boolean profileEditMode = false;
@@ -127,9 +132,19 @@ public class ManagerDashboard extends JFrame {
         JPanel rightSide = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
         rightSide.setOpaque(false);
 
-        topBarUserLabel = new JLabel("👤  " + currentManager.getFullName() + "  ·  Manager");
-        topBarUserLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        topBarUserLabel.setForeground(TEXT_MUTED);
+        topBarProfileBtn = new JButton("👤  " + currentManager.getFullName() + "  ·  Manager");
+        topBarProfileBtn.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        topBarProfileBtn.setForeground(TEXT_MUTED);
+        topBarProfileBtn.setBackground(new Color(0, 0, 0, 0));
+        topBarProfileBtn.setOpaque(false);
+        topBarProfileBtn.setBorderPainted(false);
+        topBarProfileBtn.setFocusPainted(false);
+        topBarProfileBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        topBarProfileBtn.addActionListener(e -> navigateToCard("PROFILE"));
+        topBarProfileBtn.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { topBarProfileBtn.setForeground(TEXT_PRIMARY); }
+            @Override public void mouseExited(MouseEvent e)  { topBarProfileBtn.setForeground(TEXT_MUTED); }
+        });
 
         JButton logoutBtn = makeTextButton("Logout", DANGER);
         logoutBtn.addActionListener(e -> {
@@ -138,7 +153,7 @@ public class ManagerDashboard extends JFrame {
             new main.LoginFrame().setVisible(true);
         });
 
-        rightSide.add(topBarUserLabel);
+        rightSide.add(topBarProfileBtn);
         rightSide.add(logoutBtn);
 
         bar.add(title,     BorderLayout.WEST);
@@ -165,7 +180,7 @@ public class ManagerDashboard extends JFrame {
         sidebar.add(Box.createVerticalStrut(12));
 
         // Each nav item shows a different panel in the content area
-        sidebar.add(makeNavButton("�  My Profile",     "PROFILE"));
+        sidebar.add(makeNavButton("🏠  Home",           "HOME"));
         sidebar.add(makeNavButton("�👥  Manage Users",    "USERS"));
         sidebar.add(makeNavButton("💰  Service Prices",  "PRICES"));
         sidebar.add(makeNavButton("💬  Feedbacks",       "FEEDBACKS"));
@@ -183,20 +198,268 @@ public class ManagerDashboard extends JFrame {
         contentPanel.setBackground(BG_DARK);
 
         // Build each panel
+        homePanel      = buildHomePanel();
         profilePanel   = buildProfilePanel();
         usersPanel     = buildUsersPanel();
         pricesPanel    = buildPricesPanel();
         feedbacksPanel = buildFeedbacksPanel();
         reportsPanel   = buildReportsPanel();
 
+        contentPanel.add(homePanel,      "HOME");
         contentPanel.add(profilePanel,   "PROFILE");
         contentPanel.add(usersPanel,     "USERS");
         contentPanel.add(pricesPanel,    "PRICES");
         contentPanel.add(feedbacksPanel, "FEEDBACKS");
         contentPanel.add(reportsPanel,   "REPORTS");
 
-        contentLayout.show(contentPanel, "PROFILE");  // default view
+        contentLayout.show(contentPanel, "HOME");
         return contentPanel;
+    }
+
+
+    //  PANEL — HOME (manager dashboard overview; styled like CustomerDashboard)
+    private JPanel buildHomePanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 24));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setOpaque(false);
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel welcomeLabel = new JLabel("Welcome back, " + currentManager.getFirstName() + " 👋");
+        welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        welcomeLabel.setForeground(TEXT_PRIMARY);
+        welcomeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subtitleLabel = new JLabel("Here's your management overview");
+        subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        subtitleLabel.setForeground(TEXT_MUTED);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        headerPanel.add(welcomeLabel);
+        headerPanel.add(Box.createVerticalStrut(8));
+        headerPanel.add(subtitleLabel);
+
+        homeAppointmentsValue = new JLabel("0");
+        homePendingValue = new JLabel("0");
+        homeStaffValue = new JLabel("0");
+        homeFeedbackValue = new JLabel("0");
+
+        Color blueAccent = new Color(59, 130, 246);
+        Color orangeAccent = new Color(245, 158, 11);
+        Color greenAccent = new Color(16, 185, 129);
+        Color purpleAccent = new Color(139, 92, 246);
+
+        JPanel statsGrid = new JPanel(new GridLayout(2, 2, 20, 20));
+        statsGrid.setOpaque(false);
+        statsGrid.add(wrapManagerStatCard(createManagerStatCard("\uD83D\uDCCA", "TOTAL APPOINTMENTS",
+            homeAppointmentsValue, "All bookings in the system", blueAccent, false)));
+        statsGrid.add(wrapManagerStatCard(createManagerStatCard("\u23F3", "PENDING APPOINTMENTS",
+            homePendingValue, "Awaiting completion", orangeAccent, true)));
+        statsGrid.add(wrapManagerStatCard(createManagerStatCard("\uD83D\uDC65", "STAFF ACCOUNTS",
+            homeStaffValue, "Managers, counter staff & technicians", greenAccent, false)));
+        statsGrid.add(wrapManagerStatCard(createManagerStatCard("\uD83D\uDCAC", "FEEDBACKS & COMMENTS",
+            homeFeedbackValue, "Technician feedback and customer notes", purpleAccent, false)));
+
+        JLabel quickTitle = new JLabel("Quick actions");
+        quickTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        quickTitle.setForeground(TEXT_MUTED);
+        quickTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel quickGrid = new JPanel(new GridLayout(2, 2, 20, 20));
+        quickGrid.setOpaque(false);
+        quickGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        quickGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
+
+        quickGrid.add(createManagerQuickActionCard("\uD83D\uDC65", "MANAGE USERS",
+            "Add, edit, or remove staff", "USERS", blueAccent));
+        quickGrid.add(createManagerQuickActionCard("\uD83D\uDCB0", "SERVICE PRICES",
+            "Update Normal & Major rates", "PRICES", ACCENT));
+        quickGrid.add(createManagerQuickActionCard("\uD83D\uDCAC", "FEEDBACKS",
+            "View feedback and comments", "FEEDBACKS", purpleAccent));
+        quickGrid.add(createManagerQuickActionCard("\uD83D\uDCCA", "REPORTS",
+            "Revenue and performance analytics", "REPORTS", greenAccent));
+
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+        body.add(statsGrid);
+        body.add(Box.createVerticalStrut(28));
+        body.add(quickTitle);
+        body.add(Box.createVerticalStrut(12));
+        body.add(quickGrid);
+
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(body, BorderLayout.CENTER);
+
+        refreshHomeStats();
+        return panel;
+    }
+
+    /** Wraps stat card so GridLayout sizes cells evenly (CustomerDashboard-style). */
+    private JPanel wrapManagerStatCard(JPanel statCard) {
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+        wrap.add(statCard, BorderLayout.CENTER);
+        return wrap;
+    }
+
+    /** Stat card matching CustomerDashboard createStatCard layout. */
+    private JPanel createManagerStatCard(String icon, String label, JLabel valueLabel, String subtitle,
+                                         Color accentColor, boolean highlightValue) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 4, 0, 0, accentColor),
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(24, 24, 24, 24)
+            )
+        ));
+
+        JPanel iconPanel = new JPanel(new BorderLayout());
+        iconPanel.setPreferredSize(new Dimension(56, 56));
+        iconPanel.setMaximumSize(new Dimension(56, 56));
+        iconPanel.setBackground(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 40));
+        iconPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel iconLabel = new JLabel(icon, SwingConstants.CENTER);
+        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+        iconLabel.setForeground(new Color(255, 255, 255, 230));
+        iconPanel.add(iconLabel, BorderLayout.CENTER);
+
+        JLabel labelText = new JLabel(label);
+        labelText.setFont(new Font("SansSerif", Font.BOLD, 11));
+        labelText.setForeground(TEXT_MUTED);
+        labelText.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        valueLabel.setFont(new Font("SansSerif", Font.BOLD, 36));
+        valueLabel.setForeground(highlightValue ? accentColor : TEXT_PRIMARY);
+        valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subtitleText = new JLabel("<html><body style='width: 220px'>" + subtitle + "</body></html>");
+        subtitleText.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        subtitleText.setForeground(TEXT_MUTED);
+        subtitleText.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(iconPanel);
+        card.add(Box.createVerticalStrut(16));
+        card.add(labelText);
+        card.add(Box.createVerticalStrut(12));
+        card.add(valueLabel);
+        card.add(Box.createVerticalStrut(8));
+        card.add(subtitleText);
+        card.add(Box.createVerticalGlue());
+        return card;
+    }
+
+    /** Clickable quick-action card (CustomerDashboard stat card look). */
+    private JPanel createManagerQuickActionCard(String icon, String title, String subtitle,
+                                                String cardName, Color accentColor) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(BG_CARD);
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 4, 0, 0, accentColor),
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(20, 20, 20, 20)
+            )
+        ));
+
+        JPanel iconPanel = new JPanel(new BorderLayout());
+        iconPanel.setPreferredSize(new Dimension(48, 48));
+        iconPanel.setMaximumSize(new Dimension(48, 48));
+        iconPanel.setBackground(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 40));
+        iconPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel iconLabel = new JLabel(icon, SwingConstants.CENTER);
+        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 24));
+        iconLabel.setForeground(new Color(255, 255, 255, 230));
+        iconPanel.add(iconLabel, BorderLayout.CENTER);
+
+        JLabel titleText = new JLabel(title);
+        titleText.setFont(new Font("SansSerif", Font.BOLD, 11));
+        titleText.setForeground(TEXT_PRIMARY);
+        titleText.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subtitleText = new JLabel("<html><body style='width: 200px'>" + subtitle + "</body></html>");
+        subtitleText.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        subtitleText.setForeground(TEXT_MUTED);
+        subtitleText.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel arrow = new JLabel("Open →");
+        arrow.setFont(new Font("SansSerif", Font.BOLD, 12));
+        arrow.setForeground(accentColor);
+        arrow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(iconPanel);
+        card.add(Box.createVerticalStrut(12));
+        card.add(titleText);
+        card.add(Box.createVerticalStrut(6));
+        card.add(subtitleText);
+        card.add(Box.createVerticalStrut(10));
+        card.add(arrow);
+
+        MouseAdapter navigate = new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                navigateToCard(cardName);
+            }
+            @Override public void mouseEntered(MouseEvent e) {
+                card.setBackground(BG_CARD2);
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                card.setBackground(BG_CARD);
+            }
+        };
+        wireMouseListenerRecursive(card, navigate);
+        return card;
+    }
+
+    private void wireMouseListenerRecursive(Container container, MouseAdapter listener) {
+        for (Component c : container.getComponents()) {
+            c.addMouseListener(listener);
+            if (c instanceof Container) {
+                wireMouseListenerRecursive((Container) c, listener);
+            }
+        }
+    }
+
+    private void refreshHomeStats() {
+        if (homeAppointmentsValue == null) return;
+        List<Appointment> appointments = FileHandler.loadAllAppointments();
+        homeAppointmentsValue.setText(String.valueOf(appointments.size()));
+        homePendingValue.setText(String.valueOf(
+            appointments.stream().filter(a -> "Pending".equalsIgnoreCase(a.getStatus())).count()));
+        homeStaffValue.setText(String.valueOf(loadManageableUsers().size()));
+        homeFeedbackValue.setText(String.valueOf(countFeedbacksAndComments()));
+    }
+
+    private int countFeedbacksAndComments() {
+        return FileHandler.loadAllFeedbacks().size() + FileHandler.loadAllComments().size();
+    }
+
+    private void navigateToCard(String cardName) {
+        if (profileEditMode && !"PROFILE".equals(cardName)) {
+            int result = JOptionPane.showConfirmDialog(this,
+                "You have unsaved changes. Discard them?",
+                "Unsaved Changes",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+            if (result != JOptionPane.YES_OPTION) return;
+            exitProfileEditMode();
+        }
+        if (pricesEditing && pricesCancelAction != null && !"PRICES".equals(cardName)) {
+            pricesCancelAction.run();
+        }
+        contentLayout.show(contentPanel, cardName);
+        if ("HOME".equals(cardName)) {
+            refreshHomeStats();
+        }
     }
 
 
@@ -546,8 +809,8 @@ public class ManagerDashboard extends JFrame {
      * Updates the top bar user label to reflect the latest name.
      */
     private void updateTopBarLabel() {
-        if (topBarUserLabel != null) {
-            topBarUserLabel.setText("👤  " + currentManager.getFullName() + "  ·  Manager");
+        if (topBarProfileBtn != null) {
+            topBarProfileBtn.setText("👤  " + currentManager.getFullName() + "  ·  Manager");
         }
     }
 
@@ -599,11 +862,11 @@ public class ManagerDashboard extends JFrame {
         };
 
         JTable table = makeStyledTable(usersTableModel);
-
-        // Load data from users.txt into the table
         refreshUsersTable(usersTableModel);
 
-        // Double-click listener to view full user details
+        TableRowSorter<DefaultTableModel> usersSorter = new TableRowSorter<>(usersTableModel);
+        table.setRowSorter(usersSorter);
+
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -617,6 +880,7 @@ public class ManagerDashboard extends JFrame {
         });
 
         JScrollPane scrollPane = makeScrollPane(table);
+        JPanel usersToolbar = buildUsersToolbar(usersSorter);
 
         // Action buttons row
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -643,18 +907,122 @@ public class ManagerDashboard extends JFrame {
         actionRow.add(editBtn);
         actionRow.add(deleteBtn);
 
+        JPanel tableArea = new JPanel(new BorderLayout(0, 10));
+        tableArea.setOpaque(false);
+        tableArea.add(usersToolbar, BorderLayout.NORTH);
+        tableArea.add(scrollPane, BorderLayout.CENTER);
+
         panel.add(headerRow,  BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(tableArea,  BorderLayout.CENTER);
         panel.add(actionRow,  BorderLayout.SOUTH);
         return panel;
     }
 
-    /** Clears and reloads the users table from users.txt */
+    private JPanel buildUsersToolbar(TableRowSorter<DefaultTableModel> sorter) {
+        JPanel toolbar = new JPanel(new BorderLayout());
+        toolbar.setBackground(BG_CARD);
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 1, 0, BORDER_COLOR),
+            new EmptyBorder(10, 14, 10, 14)
+        ));
+
+        JLabel searchLabel = new JLabel("Search:");
+        searchLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        searchLabel.setForeground(TEXT_MUTED);
+
+        JTextField searchField = new JTextField("Search by ID, username, or role...");
+        searchField.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        searchField.setForeground(TEXT_MUTED);
+        searchField.setBackground(BG_CARD2);
+        searchField.setCaretColor(TEXT_PRIMARY);
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(6, 10, 6, 10)
+        ));
+
+        final String placeholder = "Search by ID, username, or role...";
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override public void focusGained(FocusEvent e) {
+                if (searchField.getText().equals(placeholder)) {
+                    searchField.setText("");
+                    searchField.setForeground(TEXT_PRIMARY);
+                }
+            }
+            @Override public void focusLost(FocusEvent e) {
+                if (searchField.getText().isEmpty()) {
+                    searchField.setText(placeholder);
+                    searchField.setForeground(TEXT_MUTED);
+                }
+            }
+        });
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            private void update() {
+                String text = searchField.getText();
+                if (text.equals(placeholder) || text.isEmpty()) {
+                    applyUsersSearch(sorter, "");
+                } else {
+                    applyUsersSearch(sorter, text);
+                }
+            }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { update(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { update(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { update(); }
+        });
+
+        JPanel searchPanel = new JPanel(new BorderLayout(8, 0));
+        searchPanel.setOpaque(false);
+        searchPanel.add(searchLabel, BorderLayout.WEST);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        toolbar.add(searchPanel, BorderLayout.CENTER);
+        return toolbar;
+    }
+
+    private void applyUsersSearch(TableRowSorter<DefaultTableModel> sorter, String searchText) {
+        if (searchText.isEmpty()) {
+            sorter.setRowFilter(null);
+            return;
+        }
+        String pattern = "(?i)" + java.util.regex.Pattern.quote(searchText);
+        java.util.List<RowFilter<Object, Object>> filters = new java.util.ArrayList<>();
+        filters.add(RowFilter.regexFilter(pattern, 0));
+        filters.add(RowFilter.regexFilter(pattern, 1));
+        filters.add(RowFilter.regexFilter(pattern, 2));
+        sorter.setRowFilter(RowFilter.orFilter(filters));
+    }
+
+    /** Staff only (excludes customers) for Manage Users. */
+    private List<User> loadManageableUsers() {
+        List<User> manageable = new ArrayList<>();
+        for (User u : FileHandler.loadAllUsers()) {
+            if (!"Customer".equalsIgnoreCase(u.getRole())) {
+                manageable.add(u);
+            }
+        }
+        return manageable;
+    }
+
+    private User getManageableUser(int modelRow) {
+        List<User> users = loadManageableUsers();
+        if (modelRow < 0 || modelRow >= users.size()) {
+            return null;
+        }
+        return users.get(modelRow);
+    }
+
+    private User findUserInFullList(String userID, String username) {
+        for (User u : FileHandler.loadAllUsers()) {
+            if (u.getUserID().equals(userID) && u.getUsername().equals(username)) {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    /** Clears and reloads the users table from users.txt (staff only, no customers). */
     private void refreshUsersTable(DefaultTableModel model) {
         model.setRowCount(0);
-        List<User> users = FileHandler.loadAllUsers();
-        for (User u : users) {
-            // Managers can see all roles EXCEPT customers in user management
+        for (User u : loadManageableUsers()) {
             model.addRow(new Object[]{
                 u.getUserID(), u.getUsername(), u.getRole(),
                 u.getFirstName(), u.getLastName(), u.getEmail(), u.getPhone()
@@ -697,6 +1065,18 @@ public class ManagerDashboard extends JFrame {
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(passwordField);
+        panel.add(Box.createVerticalStrut(8));
+
+        // Confirm Password
+        panel.add(createFormLabel("Confirm Password"));
+        JPasswordField confirmPasswordField = new JPasswordField();
+        confirmPasswordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        confirmPasswordField.setBackground(BG_CARD);
+        confirmPasswordField.setForeground(TEXT_PRIMARY);
+        confirmPasswordField.setCaretColor(TEXT_PRIMARY);
+        confirmPasswordField.setBorder(new EmptyBorder(8, 8, 8, 8));
+        confirmPasswordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(confirmPasswordField);
         panel.add(Box.createVerticalStrut(8));
 
         // Role
@@ -767,20 +1147,25 @@ public class ManagerDashboard extends JFrame {
         saveBtn.addActionListener(e -> {
             String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword());
+            String confirmPassword = new String(confirmPasswordField.getPassword());
             String role = (String) roleCombo.getSelectedItem();
             String firstName = firstNameField.getText().trim();
             String lastName = lastNameField.getText().trim();
             String email = emailField.getText().trim();
             String phone = phoneField.getText().trim();
 
-            String error = validateUserInput(username, password, firstName, lastName, email, phone, null);
+            if (!password.equals(confirmPassword)) {
+                showThemedInfo("Passwords do not match. Please try again.");
+                return;
+            }
+
+            String newID = FileHandler.generateNextUserID();
+            String error = validateNewUserInput(username, password, firstName, lastName, email, phone, newID);
             if (error != null) {
                 showThemedInfo(error);
                 return;
             }
 
-            // Generate new ID and create user
-            String newID = FileHandler.generateNextUserID();
             User newUser = createUserFromRole(newID, username, password, role, firstName, lastName, email, phone);
 
             List<User> users = FileHandler.loadAllUsers();
@@ -799,7 +1184,8 @@ public class ManagerDashboard extends JFrame {
         });
 
         wireEnterToNextField(usernameField, passwordField);
-        wireEnterToNextField(passwordField, roleCombo);
+        wireEnterToNextField(passwordField, confirmPasswordField);
+        wireEnterToNextField(confirmPasswordField, roleCombo);
         wireEnterToNextField(roleCombo, firstNameField);
         wireEnterToNextField(firstNameField, lastNameField);
         wireEnterToNextField(lastNameField, emailField);
@@ -828,13 +1214,13 @@ public class ManagerDashboard extends JFrame {
      * Uses the table model row index so the correct row is edited when duplicate IDs exist.
      */
     private void openEditUserDialog(int modelRow, DefaultTableModel model) {
-        List<User> users = FileHandler.loadAllUsers();
-        if (modelRow < 0 || modelRow >= users.size()) {
+        User targetUser = getManageableUser(modelRow);
+        if (targetUser == null) {
             showThemedInfo("User not found.");
             return;
         }
-        User targetUser = users.get(modelRow);
-        final int userIndex = modelRow;
+        final String originalUserID = targetUser.getUserID();
+        final String originalUsername = targetUser.getUsername();
 
         JDialog dialog = new JDialog(this, "Edit User", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -963,11 +1349,11 @@ public class ManagerDashboard extends JFrame {
             }
 
             List<User> usersToSave = FileHandler.loadAllUsers();
-            if (userIndex < 0 || userIndex >= usersToSave.size()) {
+            User userToUpdate = findUserInFullList(originalUserID, originalUsername);
+            if (userToUpdate == null) {
                 showThemedInfo("User not found.");
                 return;
             }
-            User userToUpdate = usersToSave.get(userIndex);
             userToUpdate.setUsername(username);
             userToUpdate.setPassword(password);
             userToUpdate.setFirstName(firstName);
@@ -996,21 +1382,29 @@ public class ManagerDashboard extends JFrame {
         contentPane.add(panel, BorderLayout.CENTER);
         contentPane.add(buttonPanel, BorderLayout.SOUTH);
         dialog.add(contentPane);
+        wireEnterToNextField(usernameField, passwordField);
+        wireEnterToNextField(passwordField, firstNameField);
+        wireEnterToNextField(firstNameField, lastNameField);
+        wireEnterToNextField(lastNameField, emailField);
+        wireEnterToNextField(emailField, phoneField);
+        phoneField.addActionListener(e -> saveBtn.doClick());
+        dialog.getRootPane().setDefaultButton(saveBtn);
+
         dialog.pack();
         dialog.setSize(Math.max(dialog.getWidth(), 480), dialog.getHeight());
         dialog.setVisible(true);
+        SwingUtilities.invokeLater(usernameField::requestFocusInWindow);
     }
 
     /**
      * Displays full user details in a window (double-tap feature for users table)
      */
     private void showUserDetailsWindow(int modelRow) {
-        List<User> users = FileHandler.loadAllUsers();
-        if (modelRow < 0 || modelRow >= users.size()) {
+        User user = getManageableUser(modelRow);
+        if (user == null) {
             showThemedInfo("User not found.");
             return;
         }
-        User user = users.get(modelRow);
 
         JDialog dialog = new JDialog(this, "User Details", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -1085,14 +1479,12 @@ public class ManagerDashboard extends JFrame {
      * Uses the table model row index so the correct row is removed when duplicate IDs exist.
      */
     private void deleteUser(int modelRow, DefaultTableModel model) {
-        List<User> users = FileHandler.loadAllUsers();
-        if (modelRow < 0 || modelRow >= users.size()) {
+        User userToDelete = getManageableUser(modelRow);
+        if (userToDelete == null) {
             showThemedInfo("User not found.");
             return;
         }
-        User userToDelete = users.get(modelRow);
 
-        // Prevent self-deletion (match ID and username in case IDs are duplicated in data)
         if (userToDelete.getUserID().equals(currentManager.getUserID())
                 && userToDelete.getUsername().equals(currentManager.getUsername())) {
             showThemedInfo("You cannot delete your own account!");
@@ -1104,7 +1496,9 @@ public class ManagerDashboard extends JFrame {
 
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        users.remove(modelRow);
+        List<User> users = FileHandler.loadAllUsers();
+        users.removeIf(u -> u.getUserID().equals(userToDelete.getUserID())
+                && u.getUsername().equals(userToDelete.getUsername()));
         FileHandler.saveAllUsers(users);
 
         // If a Technician is deleted, also remove from technicians.txt
@@ -1142,6 +1536,21 @@ public class ManagerDashboard extends JFrame {
         }
 
         return null;  // all valid
+    }
+
+    /** Validates new user fields including generated user ID uniqueness. */
+    private String validateNewUserInput(String username, String password, String firstName,
+                                        String lastName, String email, String phone, String newUserID) {
+        String error = validateUserInput(username, password, firstName, lastName, email, phone, null);
+        if (error != null) {
+            return error;
+        }
+        for (User u : FileHandler.loadAllUsers()) {
+            if (u.getUserID().equals(newUserID)) {
+                return "User ID already exists. Please try again.";
+            }
+        }
+        return null;
     }
 
     /**
@@ -1221,11 +1630,11 @@ public class ManagerDashboard extends JFrame {
 
         // Get current service data
         String normalName = "Normal Service";
-        String normalDuration = "1 hour";
+        String normalDuration = formatServiceDuration(FileHandler.getServiceDuration("Normal"));
         double normalPrice = FileHandler.getServicePrice("Normal");
 
         String majorName = "Major Service";
-        String majorDuration = "3 hours";
+        String majorDuration = formatServiceDuration(FileHandler.getServiceDuration("Major"));
         double majorPrice = FileHandler.getServicePrice("Major");
 
         JPanel normalCard = buildPriceCard(normalName, normalDuration, normalPrice, false);
@@ -1271,14 +1680,7 @@ public class ManagerDashboard extends JFrame {
                 pricesEditing = false;
                 pricesCancelAction = null;
                 editBtn.setEnabled(true);
-                cardsRow.removeAll();
-                cardsRow.add(buildPriceCard(normalName, normalDuration,
-                    FileHandler.getServicePrice("Normal"), false));
-                cardsRow.add(buildPriceCard(majorName, majorDuration,
-                    FileHandler.getServicePrice("Major"), false));
-                cardsRow.revalidate();
-                cardsRow.repaint();
-
+                refreshServicePriceCards(cardsRow, normalName, majorName);
                 panel.remove(actionRow);
                 panel.revalidate();
                 panel.repaint();
@@ -1286,15 +1688,25 @@ public class ManagerDashboard extends JFrame {
 
             saveBtn.addActionListener(se -> {
                 try {
-                    String newNormalDuration = normalDurationField.getText().trim();
+                    String normalHoursInput = normalDurationField.getText().trim();
                     double newNormalPrice = Double.parseDouble(normalPriceField.getText().trim());
 
-                    String newMajorDuration = majorDurationField.getText().trim();
+                    String majorHoursInput = majorDurationField.getText().trim();
                     double newMajorPrice = Double.parseDouble(majorPriceField.getText().trim());
 
-                    // Validation
-                    if (newNormalDuration.isEmpty() || newMajorDuration.isEmpty()) {
+                    if (normalHoursInput.isEmpty() || majorHoursInput.isEmpty()) {
                         showThemedInfo("Durations cannot be empty.");
+                        return;
+                    }
+                    if (!normalHoursInput.matches("\\d+") || !majorHoursInput.matches("\\d+")) {
+                        showThemedInfo("Duration must be a whole number (hours only).");
+                        return;
+                    }
+
+                    int normalHours = Integer.parseInt(normalHoursInput);
+                    int majorHours = Integer.parseInt(majorHoursInput);
+                    if (normalHours < 1 || majorHours < 1) {
+                        showThemedInfo("Duration must be at least 1 hour.");
                         return;
                     }
                     if (newNormalPrice <= 0 || newMajorPrice <= 0) {
@@ -1302,22 +1714,18 @@ public class ManagerDashboard extends JFrame {
                         return;
                     }
 
-                    // Update services with title, price, and duration
+                    String newNormalDuration = formatServiceDuration(normalHours);
+                    String newMajorDuration = formatServiceDuration(majorHours);
+
                     FileHandler.updateService("Normal", newNormalPrice, newNormalDuration);
                     FileHandler.updateService("Major", newMajorPrice, newMajorDuration);
 
                     showThemedInfo("Services updated successfully!");
 
-                    // Return to view mode
                     pricesEditing = false;
                     pricesCancelAction = null;
                     editBtn.setEnabled(true);
-                    cardsRow.removeAll();
-                    cardsRow.add(buildPriceCard(normalName, newNormalDuration, newNormalPrice, false));
-                    cardsRow.add(buildPriceCard(majorName, newMajorDuration, newMajorPrice, false));
-                    cardsRow.revalidate();
-                    cardsRow.repaint();
-
+                    refreshServicePriceCards(cardsRow, normalName, majorName);
                     panel.remove(actionRow);
                     panel.revalidate();
                     panel.repaint();
@@ -1332,9 +1740,44 @@ public class ManagerDashboard extends JFrame {
             panel.add(actionRow, BorderLayout.SOUTH);
             panel.revalidate();
             panel.repaint();
+
+            SwingUtilities.invokeLater(normalDurationField::requestFocusInWindow);
         });
 
         return panel;
+    }
+
+    private void refreshServicePriceCards(JPanel cardsRow, String normalName, String majorName) {
+        cardsRow.removeAll();
+        cardsRow.add(buildPriceCard(normalName,
+            formatServiceDuration(FileHandler.getServiceDuration("Normal")),
+            FileHandler.getServicePrice("Normal"), false));
+        cardsRow.add(buildPriceCard(majorName,
+            formatServiceDuration(FileHandler.getServiceDuration("Major")),
+            FileHandler.getServicePrice("Major"), false));
+        cardsRow.revalidate();
+        cardsRow.repaint();
+    }
+
+    /** Formats hours for display: 1 → "1 hour", 2+ → "N hours". */
+    private String formatServiceDuration(int hours) {
+        return hours == 1 ? "1 hour" : hours + " hours";
+    }
+
+    /** Parses duration text or a numeric string into whole hours (minimum 1). */
+    private int parseServiceDurationHours(String duration) {
+        if (duration == null || duration.trim().isEmpty()) {
+            return 1;
+        }
+        String digits = duration.trim().replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) {
+            return 1;
+        }
+        try {
+            return Math.max(1, Integer.parseInt(digits));
+        } catch (NumberFormatException e) {
+            return 1;
+        }
     }
 
     private JPanel buildPriceCard(String serviceName, String duration, double price, boolean editable) {
@@ -1356,8 +1799,8 @@ public class ManagerDashboard extends JFrame {
             card.add(nameLabel);
             card.add(Box.createVerticalStrut(8));
 
-            // Duration (editable)
-            JTextField durationField = new JTextField(duration, 15);
+            // Duration (editable) — numeric hours only; hour/hours added on save
+            JTextField durationField = new JTextField(String.valueOf(parseServiceDurationHours(duration)), 15);
             durationField.setName("durationField");
             durationField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
             durationField.setBackground(BG_CARD2);
@@ -2376,22 +2819,7 @@ public class ManagerDashboard extends JFrame {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> {
             btn.setForeground(TEXT_PRIMARY);
-            // Warn user if profile is in edit mode with unsaved changes
-            if (profileEditMode && !"PROFILE".equals(cardName)) {
-                int result = JOptionPane.showConfirmDialog(this,
-                        "You have unsaved changes. Discard them?",
-                        "Unsaved Changes",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE);
-                if (result != JOptionPane.YES_OPTION)
-                    return;
-                // Exit edit mode without saving
-                exitProfileEditMode();
-            }
-            if (pricesEditing && pricesCancelAction != null && !"PRICES".equals(cardName)) {
-                pricesCancelAction.run();
-            }
-            contentLayout.show(contentPanel, cardName);
+            navigateToCard(cardName);
         });
         btn.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }

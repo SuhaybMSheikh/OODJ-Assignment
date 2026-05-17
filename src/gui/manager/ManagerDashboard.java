@@ -263,36 +263,18 @@ public class ManagerDashboard extends JFrame {
         statsGrid.add(wrapManagerStatCard(createManagerStatCard("\uD83D\uDCAC", "FEEDBACKS & COMMENTS",
             homeFeedbackValue, "Technician feedback and customer notes", purpleAccent, false)));
 
-        JLabel quickTitle = new JLabel("Quick actions");
-        quickTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
-        quickTitle.setForeground(TEXT_MUTED);
-        quickTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JPanel quickGrid = new JPanel(new GridLayout(2, 2, 20, 20));
-        quickGrid.setOpaque(false);
-        quickGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        quickGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
-
-        quickGrid.add(createManagerQuickActionCard("\uD83D\uDC65", "MANAGE USERS",
-            "Add, edit, or remove staff", "USERS", blueAccent));
-        quickGrid.add(createManagerQuickActionCard("\uD83D\uDCB0", "SERVICE PRICES",
-            "Update Normal & Major rates", "PRICES", ACCENT));
-        quickGrid.add(createManagerQuickActionCard("\uD83D\uDCAC", "FEEDBACKS",
-            "View feedback and comments", "FEEDBACKS", purpleAccent));
-        quickGrid.add(createManagerQuickActionCard("\uD83D\uDCCA", "REPORTS",
-            "Revenue and performance analytics", "REPORTS", greenAccent));
-
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.setOpaque(false);
         body.add(statsGrid);
-        body.add(Box.createVerticalStrut(28));
-        body.add(quickTitle);
-        body.add(Box.createVerticalStrut(12));
-        body.add(quickGrid);
+        body.add(Box.createVerticalGlue());
+
+        JPanel centerWrapper = new JPanel(new BorderLayout());
+        centerWrapper.setOpaque(false);
+        centerWrapper.add(body, BorderLayout.NORTH);
 
         panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(body, BorderLayout.CENTER);
+        panel.add(centerWrapper, BorderLayout.CENTER);
 
         refreshHomeStats();
         return panel;
@@ -849,11 +831,7 @@ public class ManagerDashboard extends JFrame {
         heading.setFont(new Font("SansSerif", Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
 
-        JButton addBtn = makePrimaryButton("+ Add User");
-        addBtn.addActionListener(e -> openAddUserDialog());
-
         headerRow.add(heading, BorderLayout.WEST);
-        headerRow.add(addBtn,  BorderLayout.EAST);
 
         // Table
         String[] columns = {"ID", "Username", "Role", "First Name", "Last Name", "Email", "Phone"};
@@ -919,16 +897,12 @@ public class ManagerDashboard extends JFrame {
     }
 
     private JPanel buildUsersToolbar(TableRowSorter<DefaultTableModel> sorter) {
-        JPanel toolbar = new JPanel(new BorderLayout());
+        JPanel toolbar = new JPanel(new BorderLayout(12, 0));
         toolbar.setBackground(BG_CARD);
         toolbar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(1, 0, 1, 0, BORDER_COLOR),
             new EmptyBorder(10, 14, 10, 14)
         ));
-
-        JLabel searchLabel = new JLabel("Search:");
-        searchLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
-        searchLabel.setForeground(TEXT_MUTED);
 
         JTextField searchField = new JTextField("Search by ID, username, or role...");
         searchField.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -939,6 +913,7 @@ public class ManagerDashboard extends JFrame {
             BorderFactory.createLineBorder(BORDER_COLOR),
             new EmptyBorder(6, 10, 6, 10)
         ));
+        searchField.setPreferredSize(new Dimension(0, 28));
 
         final String placeholder = "Search by ID, username, or role...";
         searchField.addFocusListener(new FocusAdapter() {
@@ -970,11 +945,11 @@ public class ManagerDashboard extends JFrame {
             public void changedUpdate(javax.swing.event.DocumentEvent e) { update(); }
         });
 
-        JPanel searchPanel = new JPanel(new BorderLayout(8, 0));
-        searchPanel.setOpaque(false);
-        searchPanel.add(searchLabel, BorderLayout.WEST);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        toolbar.add(searchPanel, BorderLayout.CENTER);
+        JButton addBtn = makePrimaryButton("+ Add User");
+        addBtn.addActionListener(e -> openAddUserDialog());
+        
+        toolbar.add(searchField, BorderLayout.CENTER);
+        toolbar.add(addBtn, BorderLayout.EAST);
         return toolbar;
     }
 

@@ -985,15 +985,6 @@ public class ManagerDashboard extends JFrame {
         return users.get(modelRow);
     }
 
-    private User findUserInFullList(String userID, String username) {
-        for (User u : FileHandler.loadAllUsers()) {
-            if (u.getUserID().equals(userID) && u.getUsername().equals(username)) {
-                return u;
-            }
-        }
-        return null;
-    }
-
     /** Clears and reloads the users table from users.txt (staff only, no customers). */
     private void refreshUsersTable(DefaultTableModel model) {
         model.setRowCount(0);
@@ -1039,7 +1030,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setCaretColor(TEXT_PRIMARY);
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(passwordField);
+        panel.add(createPasswordFieldWithToggle(passwordField));
         panel.add(Box.createVerticalStrut(8));
 
         // Confirm Password
@@ -1051,7 +1042,7 @@ public class ManagerDashboard extends JFrame {
         confirmPasswordField.setCaretColor(TEXT_PRIMARY);
         confirmPasswordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         confirmPasswordField.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(confirmPasswordField);
+        panel.add(createPasswordFieldWithToggle(confirmPasswordField));
         panel.add(Box.createVerticalStrut(8));
 
         // Role
@@ -1239,7 +1230,7 @@ public class ManagerDashboard extends JFrame {
         passwordField.setCaretColor(TEXT_PRIMARY);
         passwordField.setBorder(new EmptyBorder(8, 8, 8, 8));
         passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(passwordField);
+        panel.add(createPasswordFieldWithToggle(passwordField));
         panel.add(Box.createVerticalStrut(8));
 
         // Role (read-only)
@@ -1324,7 +1315,13 @@ public class ManagerDashboard extends JFrame {
             }
 
             List<User> usersToSave = FileHandler.loadAllUsers();
-            User userToUpdate = findUserInFullList(originalUserID, originalUsername);
+            User userToUpdate = null;
+            for (User u : usersToSave) {
+                if (u.getUserID().equals(originalUserID) && u.getUsername().equals(originalUsername)) {
+                    userToUpdate = u;
+                    break;
+                }
+            }
             if (userToUpdate == null) {
                 showThemedInfo("User not found.");
                 return;
@@ -1556,6 +1553,83 @@ public class ManagerDashboard extends JFrame {
         // Align label text with text inside input fields (matches field left padding = 8)
         label.setBorder(new EmptyBorder(0, 8, 4, 0));
         return label;
+    }
+
+    /** Wraps a password field with an icon-only show/hide toggle button. */
+    private JPanel createPasswordFieldWithToggle(JPasswordField passwordField) {
+        char hiddenEchoChar = passwordField.getEchoChar();
+        final boolean[] passwordVisible = { false };
+
+        JPanel wrapper = new JPanel(new BorderLayout(6, 0));
+        wrapper.setOpaque(false);
+        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton toggleBtn = new JButton(new PasswordVisibilityIcon(false));
+        toggleBtn.setPreferredSize(new Dimension(36, 35));
+        toggleBtn.setBackground(BG_CARD2);
+        toggleBtn.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        toggleBtn.setFocusPainted(false);
+        toggleBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        toggleBtn.setToolTipText("Show password");
+        toggleBtn.getAccessibleContext().setAccessibleName("Show password");
+
+        toggleBtn.addActionListener(e -> {
+            passwordVisible[0] = !passwordVisible[0];
+            passwordField.setEchoChar(passwordVisible[0] ? (char) 0 : hiddenEchoChar);
+            toggleBtn.setIcon(new PasswordVisibilityIcon(passwordVisible[0]));
+            toggleBtn.setToolTipText(passwordVisible[0] ? "Hide password" : "Show password");
+            toggleBtn.getAccessibleContext().setAccessibleName(passwordVisible[0] ? "Hide password" : "Show password");
+        });
+
+        wrapper.add(passwordField, BorderLayout.CENTER);
+        wrapper.add(toggleBtn, BorderLayout.EAST);
+        return wrapper;
+    }
+
+    /** Small drawn eye icon so the dialog does not depend on external image files. */
+    private class PasswordVisibilityIcon implements Icon {
+        private static final int WIDTH = 18;
+        private static final int HEIGHT = 18;
+
+        private final boolean slashed;
+
+        PasswordVisibilityIcon(boolean slashed) {
+            this.slashed = slashed;
+        }
+
+        @Override
+        public int getIconWidth() {
+            return WIDTH;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return HEIGHT;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(TEXT_MUTED);
+            g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+            int cy = y + HEIGHT / 2;
+            Path2D eye = new Path2D.Double();
+            eye.moveTo(x + 2, cy);
+            eye.quadTo(x + WIDTH / 2.0, y + 3, x + WIDTH - 2, cy);
+            eye.quadTo(x + WIDTH / 2.0, y + HEIGHT - 3, x + 2, cy);
+            g2.draw(eye);
+            g2.fillOval(x + 7, y + 7, 4, 4);
+
+            if (slashed) {
+                g2.setColor(DANGER);
+                g2.drawLine(x + 3, y + HEIGHT - 3, x + WIDTH - 3, y + 3);
+            }
+
+            g2.dispose();
+        }
     }
 
     /** Press Enter in a text field to move focus to the next input. */
@@ -1920,7 +1994,7 @@ public class ManagerDashboard extends JFrame {
                         String content = (String) model.getValueAt(row, 4);
                         String type = (String) model.getValueAt(row, 1);
                         String from = (String) model.getValueAt(row, 2);
-                        showThemedInfo("<b>" + type + " from " + from + ":</b><br><br>" + content);
+                        showThemedInfo("<b>" + type + " from " + formatFeedbackSender(type, from) + ":</b><br><br>" + content);
                     }
                 }
             }
@@ -1937,6 +2011,23 @@ public class ManagerDashboard extends JFrame {
         panel.add(heading,       BorderLayout.NORTH);
         panel.add(centerPanel,   BorderLayout.CENTER);
         return panel;
+    }
+
+    private String formatFeedbackSender(String type, String id) {
+        if ("Feedback".equals(type)) {
+            return formatPersonReference(FileHandler.getTechnicianFirstNameByID(id), id);
+        }
+        if ("Comment".equals(type)) {
+            return formatPersonReference(FileHandler.getCustomerFirstNameByID(id), id);
+        }
+        return id;
+    }
+
+    private String formatPersonReference(String firstName, String id) {
+        if (firstName == null || firstName.isBlank()) {
+            return id;
+        }
+        return firstName + " (" + id + ")";
     }
 
     /**

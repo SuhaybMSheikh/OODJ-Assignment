@@ -203,6 +203,28 @@ public class FileHandler {
         return false;
     }
 
+    /**
+     * Gets the customer's first name for a given customer ID (e.g. C001).
+     * Returns null if the customer record is not found.
+     */
+    public static String getCustomerFirstNameByID(String customerID) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(CUSTOMERS_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+
+                String[] parts = line.split("\\|");
+                if (parts.length >= 2 && parts[0].equals(customerID)) {
+                    return parts[1];
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading customers file: " + e.getMessage());
+        }
+        return null;
+    }
+
     //  APPOINTMENTS
     public static List<Appointment> loadAllAppointments() {
         List<Appointment> list = new ArrayList<>();
@@ -553,6 +575,19 @@ public class FileHandler {
         for (TechnicianMapping tech : loadAllTechnicians()) {
             if (tech.technicianID.equals(technicianID)) {
                 return tech.firstName + " " + tech.lastName;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gets the technician's first name for a given technician ID (e.g. T001).
+     * Returns null if the technician record is not found.
+     */
+    public static String getTechnicianFirstNameByID(String technicianID) {
+        for (TechnicianMapping tech : loadAllTechnicians()) {
+            if (tech.technicianID.equals(technicianID)) {
+                return tech.firstName;
             }
         }
         return null;

@@ -537,6 +537,9 @@ public class ManagerDashboard extends JFrame {
 
         // Update the top bar user label
         updateTopBarLabel();
+        
+        // Refresh the users table to show updated profile information
+        refreshUsersTable(usersTableModel);
     }
 
     /**
@@ -599,6 +602,19 @@ public class ManagerDashboard extends JFrame {
 
         // Load data from users.txt into the table
         refreshUsersTable(usersTableModel);
+
+        // Double-click listener to view full user details
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int viewRow = table.getSelectedRow();
+                    if (viewRow == -1) return;
+                    int modelRow = table.convertRowIndexToModel(viewRow);
+                    showUserDetailsWindow(modelRow);
+                }
+            }
+        });
 
         JScrollPane scrollPane = makeScrollPane(table);
 
@@ -735,7 +751,7 @@ public class ManagerDashboard extends JFrame {
         panel.add(phoneField);
 
         // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         buttonPanel.setOpaque(false);
 
         JButton cancelBtn = makeSecondaryButton("Cancel");
@@ -913,7 +929,7 @@ public class ManagerDashboard extends JFrame {
         panel.add(phoneField);
 
         // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         buttonPanel.setOpaque(false);
 
         JButton cancelBtn = makeSecondaryButton("Cancel");
@@ -971,6 +987,85 @@ public class ManagerDashboard extends JFrame {
         dialog.pack();
         dialog.setSize(Math.max(dialog.getWidth(), 480), dialog.getHeight());
         dialog.setVisible(true);
+    }
+
+    /**
+     * Displays full user details in a window (double-tap feature for users table)
+     */
+    private void showUserDetailsWindow(int modelRow) {
+        List<User> users = FileHandler.loadAllUsers();
+        if (modelRow < 0 || modelRow >= users.size()) {
+            showThemedInfo("User not found.");
+            return;
+        }
+        User user = users.get(modelRow);
+
+        JDialog dialog = new JDialog(this, "User Details", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(24, 24, 24, 24));
+
+        // Title
+        JLabel titleLabel = new JLabel("User Information");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(16));
+
+        // User details
+        panel.add(makeDetailRow("User ID:", user.getUserID()));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(makeDetailRow("Username:", user.getUsername()));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(makeDetailRow("First Name:", user.getFirstName()));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(makeDetailRow("Last Name:", user.getLastName()));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(makeDetailRow("Email:", user.getEmail()));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(makeDetailRow("Phone:", user.getPhone()));
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(makeDetailRow("Role:", user.getRole()));
+        panel.add(Box.createVerticalStrut(24));
+
+        // Close button
+        JButton closeBtn = makePrimaryButton("Close");
+        closeBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        closeBtn.addActionListener(e -> dialog.dispose());
+        panel.add(closeBtn);
+
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setSize(Math.max(dialog.getWidth(), 400), Math.max(dialog.getHeight(), 300));
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Creates a detail row with label and value
+     */
+    private JPanel makeDetailRow(String label, String value) {
+        JPanel row = new JPanel(new BorderLayout(12, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lblLabel = new JLabel(label);
+        lblLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        lblLabel.setForeground(ACCENT);
+        lblLabel.setPreferredSize(new Dimension(100, 20));
+
+        JLabel lblValue = new JLabel(value);
+        lblValue.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lblValue.setForeground(TEXT_PRIMARY);
+
+        row.add(lblLabel, BorderLayout.WEST);
+        row.add(lblValue, BorderLayout.CENTER);
+        return row;
     }
 
     /**
@@ -1644,7 +1739,6 @@ public class ManagerDashboard extends JFrame {
         JTabbedPane tabbedPane = createReportsTabbedPane();
         tabbedPane.addTab("Overview", wrapReportsTab(buildReportsOverviewPanel()));
         tabbedPane.addTab("By Service Type", wrapReportsTab(buildAppointmentsByServicePanel()));
-        tabbedPane.addTab("Revenue Analysis", wrapReportsTab(buildRevenueAnalysisPanel()));
         tabbedPane.addTab("Top Technicians", wrapReportsTab(buildTopTechniciansPanel()));
         tabbedPane.addTab("Customer Metrics", wrapReportsTab(buildCustomerMetricsPanel()));
 
@@ -1659,6 +1753,34 @@ public class ManagerDashboard extends JFrame {
         tabbedPane.setForeground(TEXT_PRIMARY);
         tabbedPane.setFont(new Font("SansSerif", Font.PLAIN, 12));
         tabbedPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
+        
+        // Custom UI to fix tab title color contrast
+        javax.swing.plaf.TabbedPaneUI ui = new javax.swing.plaf.basic.BasicTabbedPaneUI() {
+            @Override
+            protected void paintTabBackground(Graphics g, int tabPlacement, int tabIndex, 
+                    int x, int y, int w, int h, boolean isSelected) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (isSelected) {
+                    g2.setColor(ACCENT);
+                    g2.fillRect(x, y, w, h);
+                } else {
+                    g2.setColor(BG_CARD);
+                    g2.fillRect(x, y, w, h);
+                }
+            }
+            
+            @Override
+            protected void paintTabBorder(Graphics g, int tabPlacement, int tabIndex,
+                    int x, int y, int w, int h, boolean isSelected) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setColor(BORDER_COLOR);
+                g2.setStroke(new BasicStroke(1));
+                g2.drawLine(x, y + h - 1, x + w, y + h - 1);
+            }
+        };
+        tabbedPane.setUI(ui);
+        
         return tabbedPane;
     }
 
@@ -1838,7 +1960,7 @@ public class ManagerDashboard extends JFrame {
         }
         panel.add(createPieChartPanel("Services Distribution",
             serviceCountLong,
-            new Color[]{ACCENT, new Color(139, 92, 246)}), BorderLayout.EAST);
+            new Color[]{ACCENT, new Color(34, 197, 94)}), BorderLayout.EAST);
 
         return panel;
     }

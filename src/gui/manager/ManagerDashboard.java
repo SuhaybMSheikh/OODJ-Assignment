@@ -714,22 +714,14 @@ public class ManagerDashboard extends JFrame {
         // masked)
         String password = passwordVisible ? passwordField.getText().trim() : currentManager.getPassword();
 
-        if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty() ||
-                email.isEmpty() || phone.isEmpty()) {
-            errorMsg.setText("❌ All fields are required.");
+        String error = validateUserInput(username, password, firstName, lastName, email, phone,
+            currentManager.getUserID());
+        if (error != null) {
+            errorMsg.setText("Error: " + error);
             profileCard.revalidate();
             profileCard.repaint();
             return;
         }
-
-        // Validate phone number: 10-11 digits only
-        if (!phone.matches("\\d{10,11}")) {
-            errorMsg.setText("❌ Phone must be 10-11 digits.");
-            profileCard.revalidate();
-            profileCard.repaint();
-            return;
-        }
-
         // Load all users from file
         List<User> users = FileHandler.loadAllUsers();
 
@@ -1308,7 +1300,8 @@ public class ManagerDashboard extends JFrame {
             String email = emailField.getText().trim();
             String phone = phoneField.getText().trim();
 
-            String error = validateUserInput(username, password, firstName, lastName, email, phone, targetUser.getUsername());
+            String error = validateUserInput(username, password, firstName, lastName, email, phone,
+                targetUser.getUserID());
             if (error != null) {
                 showThemedInfo(error);
                 return;
@@ -1484,10 +1477,10 @@ public class ManagerDashboard extends JFrame {
 
     /**
      * Helper: Validates user input. Returns error message if invalid, null if valid.
-     * skipUsername can be set to the current username to allow keeping the same username on edit.
+     * skipUserID allows edit/profile forms to keep the current user's own values.
      */
     private String validateUserInput(String username, String password, String firstName, 
-                                     String lastName, String email, String phone, String skipUsername) {
+                                     String lastName, String email, String phone, String skipUserID) {
         if (username.isEmpty()) return "Username cannot be empty.";
         if (password.isEmpty()) return "Password cannot be empty.";
         if (firstName.isEmpty()) return "First name cannot be empty.";
@@ -1495,16 +1488,28 @@ public class ManagerDashboard extends JFrame {
         if (email.isEmpty()) return "Email cannot be empty.";
         if (phone.isEmpty()) return "Phone cannot be empty.";
 
-        // Email format validation (basic)
-        if (!email.contains("@")) return "Please enter a valid email address.";
+        if (!firstName.matches("[A-Za-z]+")) return "First name must contain alphabets only.";
+        if (!lastName.matches("[A-Za-z]+")) return "Last name must contain alphabets only.";
 
-        // Phone must be numeric
-        if (!phone.matches("\\d+")) return "Phone must contain only digits.";
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            return "Please enter a valid email address, for example gg@gmail.com.";
+        }
 
-        // Username uniqueness check (unless it's the same as current username)
-        if (skipUsername == null || !skipUsername.equals(username)) {
-            User existing = FileHandler.findUserByUsername(username);
-            if (existing != null) return "Username already exists. Please choose a different one.";
+        if (!phone.matches("\\d{10}")) return "Phone must contain exactly 10 digits.";
+
+        for (User u : FileHandler.loadAllUsers()) {
+            if (skipUserID != null && u.getUserID().equals(skipUserID)) {
+                continue;
+            }
+            if (u.getUsername().equalsIgnoreCase(username)) {
+                return "Username already exists. Please choose a different one.";
+            }
+            if (u.getEmail().equalsIgnoreCase(email)) {
+                return "Email already exists. Please choose a different one.";
+            }
+            if (u.getPhone().equals(phone)) {
+                return "Phone already exists. Please choose a different one.";
+            }
         }
 
         return null;  // all valid

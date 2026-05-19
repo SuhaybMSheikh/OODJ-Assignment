@@ -87,8 +87,7 @@ public class ManagerDashboard extends JFrame {
     private JTextField usernameField;
     private JTextField emailField;
     private JTextField phoneField;
-    private JTextField passwordField;
-    private boolean passwordVisible = false;
+    private JPasswordField passwordField;
 
 
     // CONSTRUCTOR
@@ -573,46 +572,34 @@ public class ManagerDashboard extends JFrame {
             profileCard.add(phoneRow);
             profileCard.add(Box.createVerticalStrut(12));
 
-            // Password field with eye toggle
+            // Password field with the same label/input columns as the profile fields above
             JPanel passwordRow = new JPanel(new BorderLayout(16, 0));
             passwordRow.setOpaque(false);
-            passwordRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            passwordRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            passwordRow.setPreferredSize(new Dimension(0, 28));
             JLabel passwordLbl = new JLabel("Password:");
             passwordLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
             passwordLbl.setForeground(TEXT_MUTED);
             passwordLbl.setPreferredSize(new Dimension(100, 20));
 
-            passwordField = makeEditableTextField(maskPassword(currentManager.getPassword()));
+            passwordField = new JPasswordField(currentManager.getPassword());
+            passwordField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            passwordField.setPreferredSize(new Dimension(0, 28));
+            passwordField.setMinimumSize(new Dimension(0, 28));
+            passwordField.setBackground(BG_CARD2);
+            passwordField.setForeground(TEXT_PRIMARY);
+            passwordField.setCaretColor(TEXT_PRIMARY);
+            passwordField.setOpaque(true);
+            passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            JPanel passwordFieldPanel = new JPanel(new BorderLayout(8, 0));
-            passwordFieldPanel.setOpaque(false);
-            passwordFieldPanel.add(passwordField, BorderLayout.CENTER);
-
-            JButton eyeToggle = new JButton("👁");
-            eyeToggle.setFont(new Font("SansSerif", Font.PLAIN, 16));
-            eyeToggle.setBackground(new Color(0, 0, 0, 0));
-            eyeToggle.setOpaque(false);
-            eyeToggle.setBorderPainted(false);
-            eyeToggle.setFocusPainted(false);
-            eyeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            eyeToggle.setPreferredSize(new Dimension(30, 28));
-            eyeToggle.addActionListener(e -> {
-                passwordVisible = !passwordVisible;
-                String currentText = passwordField.getText();
-                if (passwordVisible) {
-                    eyeToggle.setText("🙈");
-                    // Remove masking to show actual password
-                    passwordField.setText(currentManager.getPassword());
-                } else {
-                    eyeToggle.setText("👁");
-                    // Apply masking
-                    passwordField.setText(maskPassword(currentManager.getPassword()));
-                }
-            });
-            passwordFieldPanel.add(eyeToggle, BorderLayout.EAST);
+            JPanel passwordInputColumn = createPasswordFieldWithToggle(passwordField);
+            passwordInputColumn.setPreferredSize(new Dimension(0, 28));
+            passwordInputColumn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            passwordInputColumn.setMinimumSize(new Dimension(0, 28));
 
             passwordRow.add(passwordLbl, BorderLayout.WEST);
-            passwordRow.add(passwordFieldPanel, BorderLayout.CENTER);
+            passwordRow.add(passwordInputColumn, BorderLayout.CENTER);
             profileCard.add(passwordRow);
             profileCard.add(Box.createVerticalStrut(16));
 
@@ -675,7 +662,6 @@ public class ManagerDashboard extends JFrame {
      */
     private void enterProfileEditMode() {
         profileEditMode = true;
-        passwordVisible = false;
         if (errorMsg != null)
             errorMsg.setText("");
         refreshProfileUI();
@@ -686,7 +672,6 @@ public class ManagerDashboard extends JFrame {
      */
     private void exitProfileEditMode() {
         profileEditMode = false;
-        passwordVisible = false;
         if (errorMsg != null)
             errorMsg.setText("");
         refreshProfileUI();
@@ -710,9 +695,8 @@ public class ManagerDashboard extends JFrame {
         String username = usernameField.getText().trim();
         String email = emailField.getText().trim();
         String phone = phoneField.getText().trim();
-        // Get password (it might be masked, so use the original from currentManager if
-        // masked)
-        String password = passwordVisible ? passwordField.getText().trim() : currentManager.getPassword();
+        // JPasswordField keeps the value hidden until the shared eye toggle reveals it.
+        String password = new String(passwordField.getPassword()).trim();
 
         String error = validateUserInput(username, password, firstName, lastName, email, phone,
             currentManager.getUserID());
@@ -747,10 +731,7 @@ public class ManagerDashboard extends JFrame {
         userToUpdate.setUsername(username);
         userToUpdate.setEmail(email);
         userToUpdate.setPhone(phone);
-        // Update password if it was changed (not masked)
-        if (passwordVisible) {
-            userToUpdate.setPassword(password);
-        }
+        userToUpdate.setPassword(password);
 
         // Save the full list back to file
         FileHandler.saveAllUsers(users);
@@ -761,14 +742,10 @@ public class ManagerDashboard extends JFrame {
         currentManager.setUsername(username);
         currentManager.setEmail(email);
         currentManager.setPhone(phone);
-        // Update password if it was changed (not masked)
-        if (passwordVisible) {
-            currentManager.setPassword(password);
-        }
+        currentManager.setPassword(password);
 
         // Exit edit mode and show view mode with updated values
         profileEditMode = false;
-        passwordVisible = false;
         errorMsg.setText("");
         refreshProfileUI();
 
@@ -1564,20 +1541,47 @@ public class ManagerDashboard extends JFrame {
     private JPanel createPasswordFieldWithToggle(JPasswordField passwordField) {
         char hiddenEchoChar = passwordField.getEchoChar();
         final boolean[] passwordVisible = { false };
+        int fieldHeight = passwordField.getMaximumSize().height;
+        if (fieldHeight <= 0 || fieldHeight == Integer.MAX_VALUE) {
+            fieldHeight = 35;
+        }
 
-        JPanel wrapper = new JPanel(new BorderLayout(6, 0));
-        wrapper.setOpaque(false);
-        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        JPanel wrapper = new JPanel(new BorderLayout(0, 0));
+        wrapper.setOpaque(true);
+        wrapper.setBackground(passwordField.getBackground());
+        wrapper.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, fieldHeight));
+        wrapper.setPreferredSize(new Dimension(0, fieldHeight));
+        wrapper.setMinimumSize(new Dimension(0, fieldHeight));
         wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        passwordField.setBorder(new EmptyBorder(0, 8, 0, 8));
+
         JButton toggleBtn = new JButton(new PasswordVisibilityIcon(false));
-        toggleBtn.setPreferredSize(new Dimension(36, 35));
-        toggleBtn.setBackground(BG_CARD2);
-        toggleBtn.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        toggleBtn.setPreferredSize(new Dimension(36, fieldHeight));
+        toggleBtn.setMaximumSize(new Dimension(36, fieldHeight));
+        toggleBtn.setMinimumSize(new Dimension(36, fieldHeight));
+        toggleBtn.setBackground(passwordField.getBackground());
+        toggleBtn.setOpaque(false);
+        toggleBtn.setContentAreaFilled(false);
+        toggleBtn.setBorderPainted(false);
+        toggleBtn.setBorder(new EmptyBorder(0, 0, 0, 0));
         toggleBtn.setFocusPainted(false);
         toggleBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         toggleBtn.setToolTipText("Show password");
         toggleBtn.getAccessibleContext().setAccessibleName("Show password");
+
+        passwordField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                wrapper.setBorder(BorderFactory.createLineBorder(ACCENT, 2));
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                wrapper.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+            }
+        });
 
         toggleBtn.addActionListener(e -> {
             passwordVisible[0] = !passwordVisible[0];
@@ -3087,3 +3091,4 @@ public class ManagerDashboard extends JFrame {
         return result[0];
     }
 }
+

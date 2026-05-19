@@ -18,6 +18,7 @@ import util.Session;
 
 /**
  * GUI CLASS — TechnicianDashboard
+ * MEMBER 4 features:
  *   [1] Edit own profile (first/last name, username, email, phone, password)
  *   [2] View appointments assigned to THIS technician
  *   [3] Click an appointment to see full details + customer comments
@@ -26,25 +27,26 @@ import util.Session;
  * EXTRA:
  *   [6] Dashboard home screen with work statistics
  *   [7] Live search / filter on appointments
- * NOTE: Edit Profile + password show/hide logic copied from CounterStaffDashboard.java.
+ *
+ * Styling matches ManagerDashboard / CounterStaffDashboard for team consistency
+ * (plain nav highlight via paintComponent — no Windows rendering glitch).
  */
 public class TechnicianDashboard extends JFrame {
 
-    private static final Color BG_DARK      = new Color(13,  15,  23);
-    private static final Color BG_CARD      = new Color(22,  25,  37);
-    private static final Color BG_CARD2     = new Color(30,  34,  50);
-    private static final Color BG_HOVER     = new Color(38,  43,  62);
+    // COLOURS — same structure as Manager; amber accent is the Technician colour
+    private static final Color BG_DARK      = new Color(15,  17,  26);
+    private static final Color BG_CARD      = new Color(24,  27,  42);
+    private static final Color BG_CARD2     = new Color(30,  34,  52);
     private static final Color ACCENT       = new Color(245, 158, 11);
-    private static final Color ACCENT_SOFT  = new Color(245, 158, 11, 38);
-    private static final Color TEXT_PRIMARY = new Color(241, 243, 255);
-    private static final Color TEXT_MUTED   = new Color(143, 148, 178);
-    private static final Color TEXT_FAINT   = new Color(99, 104, 132);
-    private static final Color BORDER_COLOR = new Color(44,  48,  68);
-    private static final Color DANGER       = new Color(244, 86,  86);
-    private static final Color SUCCESS      = new Color(46, 204, 113);
-    private static final Color INFO         = new Color(70, 142, 250);
+    private static final Color TEXT_PRIMARY = new Color(240, 241, 255);
+    private static final Color TEXT_MUTED   = new Color(148, 151, 180);
+    private static final Color BORDER_COLOR = new Color(55,  58,  80);
+    private static final Color DANGER       = new Color(239, 68,  68);
+    private static final Color SUCCESS      = new Color(34, 197,  94);
+    private static final Color INFO         = new Color(59, 130, 246);
     private static final String F = "SansSerif";
 
+    // STATE
     private Technician currentTech;
     private boolean    profileEditMode = false;
     private boolean    passwordVisible = false;
@@ -62,15 +64,14 @@ public class TechnicianDashboard extends JFrame {
     private JPanel     contentPanel;
     private JPanel     dashboardPanel;
     private JLabel     topBarUserLabel;
-    private JButton    activeNavButton;
 
     public TechnicianDashboard(Technician tech) {
         this.currentTech = tech;
         setTitle("APU-ASC — Technician Dashboard");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1180, 760);
+        setSize(1100, 700);
         setLocationRelativeTo(null);
-        setMinimumSize(new Dimension(980, 640));
+        setMinimumSize(new Dimension(900, 600));
         buildUI();
     }
 
@@ -83,54 +84,56 @@ public class TechnicianDashboard extends JFrame {
         setContentPane(root);
     }
 
+    //  TOP BAR
     private JPanel buildTopBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(BG_CARD);
         bar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-            new EmptyBorder(16, 28, 16, 28)));
+            new EmptyBorder(14, 24, 14, 24)));
 
-        JPanel brand = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        brand.setOpaque(false);
-        JLabel logoDot = new JLabel("\u25C8");
-        logoDot.setFont(new Font(F, Font.BOLD, 20));
-        logoDot.setForeground(ACCENT);
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
         JLabel title = new JLabel("APU Automotive Service Centre");
         title.setFont(new Font(F, Font.BOLD, 16));
         title.setForeground(TEXT_PRIMARY);
-        JLabel tagline = new JLabel("Technician Workspace");
-        tagline.setFont(new Font(F, Font.PLAIN, 11));
-        tagline.setForeground(TEXT_FAINT);
-        titleBlock.add(title);
-        titleBlock.add(tagline);
-        brand.add(logoDot);
-        brand.add(titleBlock);
 
-        JPanel rightSide = new JPanel(new FlowLayout(FlowLayout.RIGHT, 18, 0));
+        JPanel rightSide = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
         rightSide.setOpaque(false);
+
         topBarUserLabel = new JLabel("\uD83D\uDD27  " + currentTech.getFullName() + "  ·  Technician");
         topBarUserLabel.setFont(new Font(F, Font.PLAIN, 13));
         topBarUserLabel.setForeground(TEXT_MUTED);
+        topBarUserLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        topBarUserLabel.setToolTipText("Open My Profile");
+        topBarUserLabel.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                // Open the My Profile panel (same as clicking the sidebar item)
+                if (profileEditMode) {
+                    int result = JOptionPane.showConfirmDialog(TechnicianDashboard.this,
+                            "You have unsaved changes. Discard them?",
+                            "Unsaved Changes",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.WARNING_MESSAGE);
+                    if (result != JOptionPane.YES_OPTION) return;
+                    exitProfileEditMode();
+                }
+                contentLayout.show(contentPanel, "PROFILE");
+            }
+            @Override public void mouseEntered(MouseEvent e) {
+                topBarUserLabel.setForeground(TEXT_PRIMARY);
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                topBarUserLabel.setForeground(TEXT_MUTED);
+            }
+        });
 
         JButton logoutBtn = new JButton("Logout");
-        logoutBtn.setFont(new Font(F, Font.BOLD, 12));
+        logoutBtn.setFont(new Font(F, Font.PLAIN, 13));
         logoutBtn.setForeground(DANGER);
-        logoutBtn.setBackground(BG_CARD);
-        logoutBtn.setOpaque(true);
-        logoutBtn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(DANGER.getRed(), DANGER.getGreen(), DANGER.getBlue(), 90), 1, true),
-            new EmptyBorder(7, 16, 7, 16)));
+        logoutBtn.setBackground(new Color(0, 0, 0, 0));
+        logoutBtn.setOpaque(false);
+        logoutBtn.setBorderPainted(false);
         logoutBtn.setFocusPainted(false);
         logoutBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        logoutBtn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) {
-                logoutBtn.setBackground(new Color(DANGER.getRed(), DANGER.getGreen(), DANGER.getBlue(), 28));
-            }
-            @Override public void mouseExited(MouseEvent e) { logoutBtn.setBackground(BG_CARD); }
-        });
         logoutBtn.addActionListener(e -> {
             Session.clearSession();
             dispose();
@@ -139,44 +142,37 @@ public class TechnicianDashboard extends JFrame {
 
         rightSide.add(topBarUserLabel);
         rightSide.add(logoutBtn);
-        bar.add(brand,     BorderLayout.WEST);
+        bar.add(title,     BorderLayout.WEST);
         bar.add(rightSide, BorderLayout.EAST);
         return bar;
     }
 
+    //  SIDEBAR
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(BG_CARD);
         sidebar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
-            new EmptyBorder(28, 14, 28, 14)));
-        sidebar.setPreferredSize(new Dimension(232, 0));
+            new EmptyBorder(24, 0, 24, 0)));
+        sidebar.setPreferredSize(new Dimension(220, 0));
 
-        JLabel section = new JLabel("MENU");
+        JLabel section = new JLabel("  TECHNICIAN MENU");
         section.setFont(new Font(F, Font.BOLD, 10));
-        section.setForeground(TEXT_FAINT);
-        section.setBorder(new EmptyBorder(0, 8, 0, 0));
+        section.setForeground(TEXT_MUTED);
         section.setAlignmentX(Component.LEFT_ALIGNMENT);
         sidebar.add(section);
-        sidebar.add(Box.createVerticalStrut(14));
+        sidebar.add(Box.createVerticalStrut(12));
 
-        sidebar.add(makeNavButton("\uD83D\uDCCA   Dashboard",       "DASHBOARD"));
-        sidebar.add(Box.createVerticalStrut(6));
-        sidebar.add(makeNavButton("\uD83D\uDC64   My Profile",      "PROFILE"));
-        sidebar.add(Box.createVerticalStrut(6));
-        sidebar.add(makeNavButton("\uD83D\uDCC5   My Appointments", "APPOINTMENTS"));
+        sidebar.add(makeNavButton("\uD83D\uDCCA  Dashboard",       "DASHBOARD"));
+        sidebar.add(makeNavButton("\uD83D\uDC64  My Profile",      "PROFILE"));
+        sidebar.add(makeNavButton("\uD83D\uDCC5  My Appointments", "APPOINTMENTS"));
+
         sidebar.add(Box.createVerticalGlue());
-
-        JLabel sig = new JLabel("APU-ASC v2.0");
-        sig.setFont(new Font(F, Font.PLAIN, 10));
-        sig.setForeground(TEXT_FAINT);
-        sig.setBorder(new EmptyBorder(0, 8, 0, 0));
-        sig.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(sig);
         return sidebar;
     }
 
+    //  CONTENT
     private JPanel buildContent() {
         contentLayout = new CardLayout();
         contentPanel  = new JPanel(contentLayout);
@@ -189,25 +185,26 @@ public class TechnicianDashboard extends JFrame {
         return contentPanel;
     }
 
+    //  PANEL 0 — DASHBOARD (EXTRA FEATURE)
     private JPanel buildDashboardPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 20));
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(32, 36, 32, 36));
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setOpaque(false);
         JPanel headingBlock = new JPanel();
         headingBlock.setLayout(new BoxLayout(headingBlock, BoxLayout.Y_AXIS));
         headingBlock.setOpaque(false);
-        JLabel heading = new JLabel("Welcome back, " + currentTech.getFirstName());
-        heading.setFont(new Font(F, Font.BOLD, 25));
+        JLabel heading = new JLabel("Welcome back, " + currentTech.getFirstName() + " \uD83D\uDC4B");
+        heading.setFont(new Font(F, Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
         heading.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel subtitle = new JLabel("Here's an overview of your work at APU-ASC");
         subtitle.setFont(new Font(F, Font.PLAIN, 13));
         subtitle.setForeground(TEXT_MUTED);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitle.setBorder(new EmptyBorder(6, 0, 0, 0));
+        subtitle.setBorder(new EmptyBorder(4, 0, 0, 0));
         headingBlock.add(heading);
         headingBlock.add(subtitle);
         JButton refreshBtn = makeSecondaryButton("\u27F3  Refresh");
@@ -231,17 +228,17 @@ public class TechnicianDashboard extends JFrame {
         long feedbackCount = FileHandler.loadAllFeedbacks().stream()
             .filter(f -> f.getTechnicianID().equals(currentTech.getUserID())).count();
 
-        JPanel statsRow = new JPanel(new GridLayout(1, 4, 18, 0));
+        JPanel statsRow = new JPanel(new GridLayout(1, 4, 16, 0));
         statsRow.setOpaque(false);
         statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-        statsRow.add(makeStatCard("TOTAL APPOINTMENTS", String.valueOf(total),     "Assigned to you",   ACCENT));
-        statsRow.add(makeStatCard("PENDING",            String.valueOf(pending),   "Awaiting service",  INFO));
-        statsRow.add(makeStatCard("COMPLETED",          String.valueOf(completed), "Jobs finished",     SUCCESS));
-        statsRow.add(makeStatCard("TODAY",              String.valueOf(todayCount),"On " + todayStr,    DANGER));
+        statsRow.add(makeStatCard("TOTAL APPOINTMENTS", String.valueOf(total),     "All bookings assigned", ACCENT));
+        statsRow.add(makeStatCard("PENDING",            String.valueOf(pending),   "Awaiting completion",   ACCENT));
+        statsRow.add(makeStatCard("COMPLETED",          String.valueOf(completed), "Jobs finished",         SUCCESS));
+        statsRow.add(makeStatCard("TODAY",              String.valueOf(todayCount),"On " + todayStr,        INFO));
 
-        JPanel middleRow = new JPanel(new GridLayout(1, 2, 18, 0));
+        JPanel middleRow = new JPanel(new GridLayout(1, 2, 16, 0));
         middleRow.setOpaque(false);
-        middleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        middleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 170));
         middleRow.add(makeServiceBreakdownCard(normalCount, majorCount));
         middleRow.add(makeCompletionRateCard(completionRate, completed, total, (int) feedbackCount));
 
@@ -251,9 +248,9 @@ public class TechnicianDashboard extends JFrame {
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.setOpaque(false);
         body.add(statsRow);
-        body.add(Box.createVerticalStrut(18));
+        body.add(Box.createVerticalStrut(16));
         body.add(middleRow);
-        body.add(Box.createVerticalStrut(18));
+        body.add(Box.createVerticalStrut(16));
         body.add(recentCard);
         body.add(Box.createVerticalGlue());
 
@@ -262,29 +259,25 @@ public class TechnicianDashboard extends JFrame {
         scroll.setBackground(BG_DARK);
         scroll.getViewport().setBackground(BG_DARK);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
-        styleScrollBar(scroll);
+
         panel.add(headerRow, BorderLayout.NORTH);
         panel.add(scroll,    BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel makeStatCard(String label, String value, String subtitle, Color accent) {
-        RoundedPanel card = new RoundedPanel(14, BG_CARD);
-        card.setLayout(new BorderLayout(0, 6));
-        card.setBorder(new EmptyBorder(20, 22, 20, 22));
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
+        JPanel card = new JPanel(new BorderLayout(0, 6));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 4, 0, 0, accent),
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(18, 20, 18, 20))));
         JLabel lblLabel = new JLabel(label);
         lblLabel.setFont(new Font(F, Font.BOLD, 11));
-        lblLabel.setForeground(TEXT_FAINT);
-        JPanel dot = new JPanel();
-        dot.setOpaque(false);
-        dot.setPreferredSize(new Dimension(10, 10));
-        dot.setBorder(BorderFactory.createLineBorder(accent, 5, true));
-        top.add(lblLabel, BorderLayout.WEST);
-        top.add(dot,      BorderLayout.EAST);
+        lblLabel.setForeground(TEXT_MUTED);
         JLabel lblValue = new JLabel(value);
-        lblValue.setFont(new Font(F, Font.BOLD, 36));
+        lblValue.setFont(new Font(F, Font.BOLD, 34));
         lblValue.setForeground(TEXT_PRIMARY);
         JLabel lblSubtitle = new JLabel(subtitle);
         lblSubtitle.setFont(new Font(F, Font.PLAIN, 11));
@@ -292,33 +285,34 @@ public class TechnicianDashboard extends JFrame {
         JPanel center = new JPanel();
         center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
         center.setOpaque(false);
+        lblLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         lblValue.setAlignmentX(Component.LEFT_ALIGNMENT);
         lblSubtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        center.add(lblLabel);
+        center.add(Box.createVerticalStrut(8));
         center.add(lblValue);
-        center.add(Box.createVerticalStrut(3));
+        center.add(Box.createVerticalStrut(6));
         center.add(lblSubtitle);
-        card.add(top,    BorderLayout.NORTH);
         card.add(center, BorderLayout.CENTER);
-        JPanel accentBar = new JPanel();
-        accentBar.setBackground(accent);
-        accentBar.setPreferredSize(new Dimension(0, 3));
-        card.add(accentBar, BorderLayout.SOUTH);
         return card;
     }
 
     private JPanel makeServiceBreakdownCard(int normalCount, int majorCount) {
-        RoundedPanel card = new RoundedPanel(14, BG_CARD);
+        JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(22, 24, 22, 24));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(20, 22, 20, 22)));
         JLabel title = new JLabel("Service Type Breakdown");
         title.setFont(new Font(F, Font.BOLD, 14));
         title.setForeground(TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         int total = normalCount + majorCount;
         card.add(title);
-        card.add(Box.createVerticalStrut(20));
+        card.add(Box.createVerticalStrut(18));
         card.add(makeBarRow("Normal Service", normalCount, total, INFO));
-        card.add(Box.createVerticalStrut(16));
+        card.add(Box.createVerticalStrut(14));
         card.add(makeBarRow("Major Service",  majorCount,  total, ACCENT));
         return card;
     }
@@ -335,13 +329,13 @@ public class TechnicianDashboard extends JFrame {
         lbl.setFont(new Font(F, Font.PLAIN, 12));
         lbl.setForeground(TEXT_MUTED);
         int pct = total == 0 ? 0 : (count * 100) / total;
-        JLabel countLbl = new JLabel(count + "  ·  " + pct + "%");
+        JLabel countLbl = new JLabel(count + "  (" + pct + "%)");
         countLbl.setFont(new Font(F, Font.BOLD, 12));
         countLbl.setForeground(TEXT_PRIMARY);
         countLbl.setHorizontalAlignment(SwingConstants.RIGHT);
         labelLine.add(lbl,      BorderLayout.WEST);
         labelLine.add(countLbl, BorderLayout.EAST);
-        final int fcount = count, ftotal = total;
+        final int fc = count, ft = total;
         JPanel bar = new JPanel() {
             @Override protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -350,34 +344,37 @@ public class TechnicianDashboard extends JFrame {
                 int w = getWidth(), h = getHeight();
                 g2.setColor(BG_CARD2);
                 g2.fillRoundRect(0, 0, w, h, h, h);
-                int fillW = ftotal == 0 ? 0 : (int) ((long) w * fcount / ftotal);
+                int fw = ft == 0 ? 0 : (int) ((long) w * fc / ft);
                 g2.setColor(barColor);
-                g2.fillRoundRect(0, 0, fillW, h, h, h);
+                g2.fillRoundRect(0, 0, fw, h, h, h);
                 g2.dispose();
             }
         };
         bar.setOpaque(false);
-        bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 9));
-        bar.setPreferredSize(new Dimension(0, 9));
+        bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 8));
+        bar.setPreferredSize(new Dimension(0, 8));
         row.add(labelLine);
-        row.add(Box.createVerticalStrut(8));
+        row.add(Box.createVerticalStrut(7));
         row.add(bar);
         return row;
     }
 
     private JPanel makeCompletionRateCard(int rate, int completed, int total, int feedbackCount) {
-        RoundedPanel card = new RoundedPanel(14, BG_CARD);
+        JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(22, 24, 22, 24));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(20, 22, 20, 22)));
         JLabel title = new JLabel("Performance");
         title.setFont(new Font(F, Font.BOLD, 14));
         title.setForeground(TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel rateLbl = new JLabel(rate + "%");
-        rateLbl.setFont(new Font(F, Font.BOLD, 42));
+        rateLbl.setFont(new Font(F, Font.BOLD, 38));
         rateLbl.setForeground(rate >= 75 ? SUCCESS : (rate >= 40 ? ACCENT : DANGER));
         rateLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel rateSubtitle = new JLabel("Completion rate · " + completed + " of " + total + " jobs");
+        JLabel rateSubtitle = new JLabel("Completion rate (" + completed + " of " + total + " jobs)");
         rateSubtitle.setFont(new Font(F, Font.PLAIN, 12));
         rateSubtitle.setForeground(TEXT_MUTED);
         rateSubtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -385,33 +382,36 @@ public class TechnicianDashboard extends JFrame {
         sep.setForeground(BORDER_COLOR);
         sep.setBackground(BORDER_COLOR);
         sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        JLabel feedbackLbl = new JLabel("\uD83D\uDCDD   " + feedbackCount
+        JLabel feedbackLbl = new JLabel("\uD83D\uDCDD  " + feedbackCount
             + " feedback report" + (feedbackCount == 1 ? "" : "s") + " submitted");
         feedbackLbl.setFont(new Font(F, Font.PLAIN, 12));
         feedbackLbl.setForeground(TEXT_MUTED);
         feedbackLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(title);
-        card.add(Box.createVerticalStrut(14));
+        card.add(Box.createVerticalStrut(12));
         card.add(rateLbl);
         card.add(Box.createVerticalStrut(4));
         card.add(rateSubtitle);
-        card.add(Box.createVerticalStrut(18));
+        card.add(Box.createVerticalStrut(16));
         card.add(sep);
-        card.add(Box.createVerticalStrut(18));
+        card.add(Box.createVerticalStrut(16));
         card.add(feedbackLbl);
         return card;
     }
 
     private JPanel makeRecentActivityCard(List<Appointment> myAppointments) {
-        RoundedPanel card = new RoundedPanel(14, BG_CARD);
+        JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(new EmptyBorder(22, 24, 22, 24));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(20, 22, 20, 22)));
         JLabel title = new JLabel("Recent Activity");
         title.setFont(new Font(F, Font.BOLD, 14));
         title.setForeground(TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(title);
-        card.add(Box.createVerticalStrut(18));
+        card.add(Box.createVerticalStrut(16));
         if (myAppointments.isEmpty()) {
             JLabel empty = new JLabel("No appointments yet.");
             empty.setFont(new Font(F, Font.PLAIN, 13));
@@ -427,18 +427,18 @@ public class TechnicianDashboard extends JFrame {
             .collect(java.util.stream.Collectors.toList());
         for (int i = 0; i < recent.size(); i++) {
             Appointment a = recent.get(i);
-            String customerName = customerNames.getOrDefault(a.getCustomerID(), a.getCustomerID());
-            card.add(makeActivityRow(a, customerName));
-            if (i < recent.size() - 1) card.add(Box.createVerticalStrut(10));
+            String cn = customerNames.getOrDefault(a.getCustomerID(), a.getCustomerID());
+            card.add(makeActivityRow(a, cn));
+            if (i < recent.size() - 1) card.add(Box.createVerticalStrut(8));
         }
         return card;
     }
 
     private JPanel makeActivityRow(Appointment a, String customerName) {
-        RoundedPanel row = new RoundedPanel(10, BG_CARD2);
-        row.setLayout(new BorderLayout(12, 0));
+        JPanel row = new JPanel(new BorderLayout(12, 0));
+        row.setBackground(BG_CARD2);
         row.setBorder(new EmptyBorder(12, 16, 12, 16));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         JPanel left = new JPanel();
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
@@ -452,23 +452,15 @@ public class TechnicianDashboard extends JFrame {
         left.add(mainLbl);
         left.add(Box.createVerticalStrut(3));
         left.add(subLbl);
-        row.add(left, BorderLayout.WEST);
-        row.add(makeStatusPill(a.getStatus()), BorderLayout.EAST);
+        boolean done = "Completed".equals(a.getStatus());
+        JLabel statusPill = new JLabel(a.getStatus());
+        statusPill.setFont(new Font(F, Font.BOLD, 11));
+        statusPill.setForeground(done ? SUCCESS : ACCENT);
+        statusPill.setBorder(new EmptyBorder(4, 10, 4, 10));
+        statusPill.setHorizontalAlignment(SwingConstants.CENTER);
+        row.add(left,       BorderLayout.WEST);
+        row.add(statusPill, BorderLayout.EAST);
         return row;
-    }
-
-    private JComponent makeStatusPill(String status) {
-        boolean done = "Completed".equals(status);
-        Color c = done ? SUCCESS : ACCENT;
-        JLabel pill = new JLabel(status);
-        pill.setFont(new Font(F, Font.BOLD, 11));
-        pill.setForeground(c);
-        pill.setOpaque(false);
-        pill.setHorizontalAlignment(SwingConstants.CENTER);
-        pill.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(c.getRed(), c.getGreen(), c.getBlue(), 110), 1, true),
-            new EmptyBorder(5, 14, 5, 14)));
-        return pill;
     }
 
     private Map<String, String> loadCustomerNames() {
@@ -522,105 +514,56 @@ public class TechnicianDashboard extends JFrame {
         contentPanel.repaint();
     }
 
-    // PANEL 1 — MY PROFILE (Edit Profile + show/hide copied from CounterStaffDashboard.java)
+    //  PANEL 1 — MY PROFILE  (plain style, same as Manager / CounterStaff)
     private JPanel buildProfilePanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 20));
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(32, 36, 32, 36));
-        JPanel headBlock = new JPanel();
-        headBlock.setLayout(new BoxLayout(headBlock, BoxLayout.Y_AXIS));
-        headBlock.setOpaque(false);
-        JLabel heading = new JLabel("My Profile");
-        heading.setFont(new Font(F, Font.BOLD, 25));
-        heading.setForeground(TEXT_PRIMARY);
-        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel sub = new JLabel("Manage your account information");
-        sub.setFont(new Font(F, Font.PLAIN, 13));
-        sub.setForeground(TEXT_MUTED);
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sub.setBorder(new EmptyBorder(6, 0, 0, 0));
-        headBlock.add(heading);
-        headBlock.add(sub);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
-        profileCard = new RoundedPanel(16, BG_CARD);
+        JLabel heading = new JLabel("My Profile");
+        heading.setFont(new Font(F, Font.BOLD, 22));
+        heading.setForeground(TEXT_PRIMARY);
+
+        profileCard = new JPanel();
         profileCard.setLayout(new BoxLayout(profileCard, BoxLayout.Y_AXIS));
-        profileCard.setBorder(new EmptyBorder(32, 34, 32, 34));
-        profileCard.setMaximumSize(new Dimension(560, Integer.MAX_VALUE));
+        profileCard.setBackground(BG_CARD);
+        profileCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(28, 28, 28, 28)));
+        profileCard.setMaximumSize(new Dimension(500, Integer.MAX_VALUE));
         profileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         refreshProfileUI();
 
-        JPanel wrap = new JPanel();
-        wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
-        wrap.setOpaque(false);
-        wrap.add(profileCard);
-        wrap.add(Box.createVerticalGlue());
-        panel.add(headBlock, BorderLayout.NORTH);
-        panel.add(wrap, BorderLayout.CENTER);
+        panel.add(heading, BorderLayout.NORTH);
+        panel.add(profileCard, BorderLayout.CENTER);
         return panel;
     }
 
     private void refreshProfileUI() {
         profileCard.removeAll();
+
         if (!profileEditMode) {
-            JLabel avatar = new JLabel(initials(currentTech.getFullName()), SwingConstants.CENTER);
-            avatar.setFont(new Font(F, Font.BOLD, 22));
-            avatar.setForeground(BG_DARK);
-            RoundedPanel avatarWrap = new RoundedPanel(32, ACCENT);
-            avatarWrap.setLayout(new BorderLayout());
-            avatarWrap.setMaximumSize(new Dimension(64, 64));
-            avatarWrap.setPreferredSize(new Dimension(64, 64));
-            avatarWrap.setAlignmentX(Component.LEFT_ALIGNMENT);
-            avatarWrap.add(avatar, BorderLayout.CENTER);
-            profileCard.add(avatarWrap);
-            profileCard.add(Box.createVerticalStrut(12));
-
-            JLabel nameLbl = new JLabel(currentTech.getFullName());
-            nameLbl.setFont(new Font(F, Font.BOLD, 19));
-            nameLbl.setForeground(TEXT_PRIMARY);
-            nameLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-            JLabel roleLbl = new JLabel("Technician  ·  " + currentTech.getUsername());
-            roleLbl.setFont(new Font(F, Font.PLAIN, 12));
-            roleLbl.setForeground(TEXT_MUTED);
-            roleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-            roleLbl.setBorder(new EmptyBorder(4, 0, 0, 0));
-            profileCard.add(nameLbl);
-            profileCard.add(roleLbl);
-            profileCard.add(Box.createVerticalStrut(24));
-
-            JSeparator sep = new JSeparator();
-            sep.setForeground(BORDER_COLOR);
-            sep.setBackground(BORDER_COLOR);
-            sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-            profileCard.add(sep);
-            profileCard.add(Box.createVerticalStrut(24));
-
             profileCard.add(makeInfoRow("Full Name", currentTech.getFullName()));
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
             profileCard.add(makeInfoRow("Username", currentTech.getUsername()));
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
             profileCard.add(makeInfoRow("Email", currentTech.getEmail()));
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
             profileCard.add(makeInfoRow("Phone", currentTech.getPhone()));
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
             profileCard.add(makeInfoRow("Password", maskPassword(currentTech.getPassword())));
-            profileCard.add(Box.createVerticalStrut(28));
+            profileCard.add(Box.createVerticalStrut(24));
 
-            JButton editBtn = makePrimaryButton("\u270E   Edit Profile");
+            JButton editBtn = makePrimaryButton("\u270F  Edit Profile");
             editBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             editBtn.addActionListener(e -> enterProfileEditMode());
             profileCard.add(editBtn);
         } else {
-            JLabel editTitle = new JLabel("Edit Profile");
-            editTitle.setFont(new Font(F, Font.BOLD, 17));
-            editTitle.setForeground(TEXT_PRIMARY);
-            editTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-            profileCard.add(editTitle);
-            profileCard.add(Box.createVerticalStrut(22));
-
             JPanel fullNameRow = new JPanel(new BorderLayout(16, 0));
             fullNameRow.setOpaque(false);
-            fullNameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-            JLabel fullNameLbl = new JLabel("Full Name");
+            fullNameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel fullNameLbl = new JLabel("Full Name:");
             fullNameLbl.setFont(new Font(F, Font.PLAIN, 13));
             fullNameLbl.setForeground(TEXT_MUTED);
             fullNameLbl.setPreferredSize(new Dimension(100, 20));
@@ -628,9 +571,9 @@ public class TechnicianDashboard extends JFrame {
             nameFieldsPanel.setOpaque(false);
             firstNameField = makeEditableTextField(currentTech.getFirstName());
             lastNameField  = makeEditableTextField(currentTech.getLastName());
-            Dimension nfh = new Dimension(0, 34);
-            firstNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-            lastNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+            Dimension nfh = new Dimension(0, 28);
+            firstNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            lastNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
             firstNameField.setPreferredSize(nfh);
             lastNameField.setPreferredSize(nfh);
             nameFieldsPanel.add(firstNameField);
@@ -638,12 +581,12 @@ public class TechnicianDashboard extends JFrame {
             fullNameRow.add(fullNameLbl, BorderLayout.WEST);
             fullNameRow.add(nameFieldsPanel, BorderLayout.CENTER);
             profileCard.add(fullNameRow);
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
 
             JPanel usernameRow = new JPanel(new BorderLayout(16, 0));
             usernameRow.setOpaque(false);
-            usernameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-            JLabel usernameLbl = new JLabel("Username");
+            usernameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel usernameLbl = new JLabel("Username:");
             usernameLbl.setFont(new Font(F, Font.PLAIN, 13));
             usernameLbl.setForeground(TEXT_MUTED);
             usernameLbl.setPreferredSize(new Dimension(100, 20));
@@ -651,12 +594,12 @@ public class TechnicianDashboard extends JFrame {
             usernameRow.add(usernameLbl, BorderLayout.WEST);
             usernameRow.add(usernameField, BorderLayout.CENTER);
             profileCard.add(usernameRow);
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
 
             JPanel emailRow = new JPanel(new BorderLayout(16, 0));
             emailRow.setOpaque(false);
-            emailRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-            JLabel emailLbl = new JLabel("Email");
+            emailRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel emailLbl = new JLabel("Email:");
             emailLbl.setFont(new Font(F, Font.PLAIN, 13));
             emailLbl.setForeground(TEXT_MUTED);
             emailLbl.setPreferredSize(new Dimension(100, 20));
@@ -664,12 +607,12 @@ public class TechnicianDashboard extends JFrame {
             emailRow.add(emailLbl, BorderLayout.WEST);
             emailRow.add(emailField, BorderLayout.CENTER);
             profileCard.add(emailRow);
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
 
             JPanel phoneRow = new JPanel(new BorderLayout(16, 0));
             phoneRow.setOpaque(false);
-            phoneRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-            JLabel phoneLbl = new JLabel("Phone");
+            phoneRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel phoneLbl = new JLabel("Phone:");
             phoneLbl.setFont(new Font(F, Font.PLAIN, 13));
             phoneLbl.setForeground(TEXT_MUTED);
             phoneLbl.setPreferredSize(new Dimension(100, 20));
@@ -677,12 +620,12 @@ public class TechnicianDashboard extends JFrame {
             phoneRow.add(phoneLbl, BorderLayout.WEST);
             phoneRow.add(phoneField, BorderLayout.CENTER);
             profileCard.add(phoneRow);
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
 
             JPanel passwordRow = new JPanel(new BorderLayout(16, 0));
             passwordRow.setOpaque(false);
-            passwordRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-            JLabel passwordLbl = new JLabel("Password");
+            passwordRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+            JLabel passwordLbl = new JLabel("Password:");
             passwordLbl.setFont(new Font(F, Font.PLAIN, 13));
             passwordLbl.setForeground(TEXT_MUTED);
             passwordLbl.setPreferredSize(new Dimension(100, 20));
@@ -692,12 +635,12 @@ public class TechnicianDashboard extends JFrame {
             passwordFieldPanel.add(passwordField, BorderLayout.CENTER);
             JButton eyeToggle = new JButton("\uD83D\uDC41");
             eyeToggle.setFont(new Font(F, Font.PLAIN, 16));
-            eyeToggle.setBackground(BG_CARD2);
-            eyeToggle.setOpaque(true);
-            eyeToggle.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+            eyeToggle.setBackground(new Color(0, 0, 0, 0));
+            eyeToggle.setOpaque(false);
+            eyeToggle.setBorderPainted(false);
             eyeToggle.setFocusPainted(false);
             eyeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            eyeToggle.setPreferredSize(new Dimension(38, 34));
+            eyeToggle.setPreferredSize(new Dimension(30, 28));
             eyeToggle.addActionListener(e -> {
                 passwordVisible = !passwordVisible;
                 if (passwordVisible) {
@@ -712,22 +655,20 @@ public class TechnicianDashboard extends JFrame {
             passwordRow.add(passwordLbl, BorderLayout.WEST);
             passwordRow.add(passwordFieldPanel, BorderLayout.CENTER);
             profileCard.add(passwordRow);
-            profileCard.add(Box.createVerticalStrut(18));
+            profileCard.add(Box.createVerticalStrut(16));
 
             errorMsg = new JLabel();
             errorMsg.setForeground(DANGER);
             errorMsg.setFont(new Font(F, Font.PLAIN, 12));
             errorMsg.setAlignmentX(Component.LEFT_ALIGNMENT);
             profileCard.add(errorMsg);
-            profileCard.add(Box.createVerticalStrut(14));
+            profileCard.add(Box.createVerticalStrut(12));
 
             JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
             buttonRow.setOpaque(false);
-            buttonRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-            buttonRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-            JButton doneBtn = makePrimaryButton("\u2713   Done");
+            JButton doneBtn = makePrimaryButton("\u2713  Done");
             doneBtn.addActionListener(e -> onProfileSave());
-            JButton cancelBtn = makeSecondaryButton("\u2715   Cancel");
+            JButton cancelBtn = makeSecondaryButton("\u2715  Cancel");
             cancelBtn.addActionListener(e -> exitProfileEditMode());
             buttonRow.add(doneBtn);
             buttonRow.add(cancelBtn);
@@ -742,22 +683,16 @@ public class TechnicianDashboard extends JFrame {
         field.setFont(new Font(F, Font.PLAIN, 13));
         field.setBackground(BG_CARD2);
         field.setForeground(TEXT_PRIMARY);
-        field.setCaretColor(ACCENT);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR, 1),
-            new EmptyBorder(6, 10, 6, 10)));
-        field.setMaximumSize(new Dimension(260, 34));
-        field.setPreferredSize(new Dimension(260, 34));
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        field.setMaximumSize(new Dimension(200, 28));
+        field.setPreferredSize(new Dimension(200, 28));
         field.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override public void focusGained(java.awt.event.FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ACCENT, 2),
-                    new EmptyBorder(5, 9, 5, 9)));
+                field.setBorder(BorderFactory.createLineBorder(ACCENT, 2));
             }
             @Override public void focusLost(java.awt.event.FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(BORDER_COLOR, 1),
-                    new EmptyBorder(6, 10, 6, 10)));
+                field.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
             }
         });
         return field;
@@ -791,12 +726,12 @@ public class TechnicianDashboard extends JFrame {
 
         if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty()
                 || email.isEmpty() || phone.isEmpty()) {
-            errorMsg.setText("\u26A0  All fields are required.");
+            errorMsg.setText("\u274C All fields are required.");
             profileCard.revalidate(); profileCard.repaint();
             return;
         }
         if (!phone.matches("\\d{10,11}")) {
-            errorMsg.setText("\u26A0  Phone must be 10-11 digits.");
+            errorMsg.setText("\u274C Phone must be 10-11 digits.");
             profileCard.revalidate(); profileCard.repaint();
             return;
         }
@@ -806,7 +741,7 @@ public class TechnicianDashboard extends JFrame {
             if (u.getUserID().equals(currentTech.getUserID())) { userToUpdate = u; break; }
         }
         if (userToUpdate == null) {
-            errorMsg.setText("\u26A0  Error: User not found in database.");
+            errorMsg.setText("\u274C Error: User not found in database.");
             profileCard.revalidate(); profileCard.repaint();
             return;
         }
@@ -840,30 +775,20 @@ public class TechnicianDashboard extends JFrame {
         }
     }
 
-    // PANEL 2 — MY APPOINTMENTS
+    //  PANEL 2 — MY APPOINTMENTS
     private JPanel buildAppointmentsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(20, 0));
+        JPanel panel = new JPanel(new BorderLayout(16, 0));
         panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(32, 36, 32, 36));
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
-        JPanel leftPane = new JPanel(new BorderLayout(0, 16));
+        JPanel leftPane = new JPanel(new BorderLayout(0, 12));
         leftPane.setOpaque(false);
-        leftPane.setPreferredSize(new Dimension(480, 0));
+        leftPane.setPreferredSize(new Dimension(450, 0));
 
-        JPanel headBlock = new JPanel();
-        headBlock.setLayout(new BoxLayout(headBlock, BoxLayout.Y_AXIS));
-        headBlock.setOpaque(false);
         JLabel heading = new JLabel("My Appointments");
-        heading.setFont(new Font(F, Font.BOLD, 25));
+        heading.setFont(new Font(F, Font.BOLD, 22));
         heading.setForeground(TEXT_PRIMARY);
         heading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel sub = new JLabel("Click a row to view details");
-        sub.setFont(new Font(F, Font.PLAIN, 13));
-        sub.setForeground(TEXT_MUTED);
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sub.setBorder(new EmptyBorder(6, 0, 0, 0));
-        headBlock.add(heading);
-        headBlock.add(sub);
 
         String[] cols = {"ID", "Date", "Time", "Service", "Status"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
@@ -889,7 +814,7 @@ public class TechnicianDashboard extends JFrame {
         searchField.setCaretColor(ACCENT);
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(9, 12, 9, 12)));
+            new EmptyBorder(8, 12, 8, 12)));
         searchField.setToolTipText("Search by ID, date, service or status");
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             private void doFilter() {
@@ -903,39 +828,39 @@ public class TechnicianDashboard extends JFrame {
         });
         JLabel searchLbl = new JLabel("\uD83D\uDD0D  Search appointments");
         searchLbl.setFont(new Font(F, Font.PLAIN, 11));
-        searchLbl.setForeground(TEXT_FAINT);
+        searchLbl.setForeground(TEXT_MUTED);
         searchLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         searchLbl.setBorder(new EmptyBorder(0, 2, 6, 0));
-        JPanel searchWrap = new JPanel(new BorderLayout());
-        searchWrap.setOpaque(false);
-        searchWrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-        searchWrap.add(searchField, BorderLayout.CENTER);
+        searchField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        searchField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
 
         JScrollPane scroll = makeScrollPane(table);
 
         JPanel listTop = new JPanel();
         listTop.setLayout(new BoxLayout(listTop, BoxLayout.Y_AXIS));
         listTop.setOpaque(false);
-        headBlock.setAlignmentX(Component.LEFT_ALIGNMENT);
-        searchWrap.setAlignmentX(Component.LEFT_ALIGNMENT);
-        listTop.add(headBlock);
-        listTop.add(Box.createVerticalStrut(16));
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        listTop.add(heading);
+        listTop.add(Box.createVerticalStrut(14));
         listTop.add(searchLbl);
-        listTop.add(searchWrap);
+        listTop.add(searchField);
 
         leftPane.add(listTop, BorderLayout.NORTH);
         leftPane.add(scroll,  BorderLayout.CENTER);
 
-        RoundedPanel rightPane = new RoundedPanel(16, BG_CARD);
+        JPanel rightPane = new JPanel();
         rightPane.setLayout(new BoxLayout(rightPane, BoxLayout.Y_AXIS));
-        rightPane.setBorder(new EmptyBorder(28, 28, 28, 28));
+        rightPane.setBackground(BG_CARD);
+        rightPane.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(24, 24, 24, 24)));
 
         JLabel detailHeading = new JLabel("Appointment Details");
-        detailHeading.setFont(new Font(F, Font.BOLD, 17));
+        detailHeading.setFont(new Font(F, Font.BOLD, 16));
         detailHeading.setForeground(TEXT_PRIMARY);
         detailHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel detailContent = new JLabel(
-            "<html><div style='color:#8F94B2;'>Select an appointment from the<br>"
+            "<html><div style='color:#9497B4;'>Select an appointment from the<br>"
             + "list to view its details.</div></html>");
         detailContent.setFont(new Font(F, Font.PLAIN, 13));
         detailContent.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -947,12 +872,12 @@ public class TechnicianDashboard extends JFrame {
         commentArea.setFont(new Font(F, Font.PLAIN, 12));
         commentArea.setForeground(TEXT_MUTED);
         commentArea.setBackground(BG_CARD2);
-        commentArea.setBorder(new EmptyBorder(12, 14, 12, 14));
+        commentArea.setBorder(new EmptyBorder(10, 12, 10, 12));
         JScrollPane commentScroll = new JScrollPane(commentArea);
         commentScroll.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
         commentScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
-        commentScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
-        commentScroll.setPreferredSize(new Dimension(0, 110));
+        commentScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        commentScroll.setPreferredSize(new Dimension(0, 100));
         commentScroll.setVisible(false);
         JLabel commentTitle = new JLabel("\uD83D\uDCAC  Customer Comment");
         commentTitle.setFont(new Font(F, Font.BOLD, 12));
@@ -960,23 +885,23 @@ public class TechnicianDashboard extends JFrame {
         commentTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         commentTitle.setVisible(false);
 
-        JButton completeBtn = makePrimaryButton("\u2705   Mark as Completed");
+        JButton completeBtn = makePrimaryButton("\u2705  Mark as Completed");
         completeBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
         completeBtn.setEnabled(false);
-        JButton feedbackBtn = makeSecondaryButton("\uD83D\uDCDD   Write Feedback");
+        JButton feedbackBtn = makeSecondaryButton("\uD83D\uDCDD  Write Feedback");
         feedbackBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
         feedbackBtn.setEnabled(false);
 
         rightPane.add(detailHeading);
-        rightPane.add(Box.createVerticalStrut(18));
+        rightPane.add(Box.createVerticalStrut(16));
         rightPane.add(detailContent);
-        rightPane.add(Box.createVerticalStrut(20));
+        rightPane.add(Box.createVerticalStrut(18));
         rightPane.add(commentTitle);
-        rightPane.add(Box.createVerticalStrut(8));
+        rightPane.add(Box.createVerticalStrut(6));
         rightPane.add(commentScroll);
-        rightPane.add(Box.createVerticalStrut(24));
+        rightPane.add(Box.createVerticalStrut(22));
         rightPane.add(completeBtn);
-        rightPane.add(Box.createVerticalStrut(12));
+        rightPane.add(Box.createVerticalStrut(10));
         rightPane.add(feedbackBtn);
         rightPane.add(Box.createVerticalGlue());
 
@@ -998,19 +923,13 @@ public class TechnicianDashboard extends JFrame {
                 }
             }
             detailContent.setText(
-                "<html><div style='line-height:1.9;'>"
-                + "<span style='color:#8F94B2;'>Appointment ID</span><br>"
-                + "<b style='color:#F1F3FF;font-size:14px;'>" + apptID + "</b><br><br>"
-                + "<span style='color:#8F94B2;'>Customer</span><br>"
-                + "<b style='color:#F1F3FF;'>" + custName + "</b><br><br>"
-                + "<span style='color:#8F94B2;'>Date &amp; Time</span><br>"
-                + "<b style='color:#F1F3FF;'>" + model.getValueAt(row, 1)
-                    + " at " + model.getValueAt(row, 2) + "</b><br><br>"
-                + "<span style='color:#8F94B2;'>Service</span><br>"
-                + "<b style='color:#F1F3FF;'>" + model.getValueAt(row, 3) + "</b><br><br>"
-                + "<span style='color:#8F94B2;'>Status</span><br>"
-                + "<b style='color:" + ("Completed".equals(status) ? "#2ECC71" : "#F59E0B")
-                    + ";'>" + status + "</b></div></html>");
+                "<html><div style='line-height:1.8;'>"
+                + "<b style='color:#F0F1FF;'>Appointment ID:</b>  " + apptID + "<br>"
+                + "<b style='color:#F0F1FF;'>Customer:</b>  " + custName + "<br>"
+                + "<b style='color:#F0F1FF;'>Date:</b>  " + model.getValueAt(row, 1) + "<br>"
+                + "<b style='color:#F0F1FF;'>Time:</b>  " + model.getValueAt(row, 2) + "<br>"
+                + "<b style='color:#F0F1FF;'>Service:</b>  " + model.getValueAt(row, 3) + "<br>"
+                + "<b style='color:#F0F1FF;'>Status:</b>  " + status + "</div></html>");
             String comment = commentsMap.get(apptID);
             if (comment != null && !comment.isEmpty()) {
                 commentArea.setText(comment);
@@ -1021,8 +940,8 @@ public class TechnicianDashboard extends JFrame {
                 commentTitle.setVisible(false);
                 commentScroll.setVisible(false);
             }
-            if ("Pending".equals(status)) completeBtn.setText("\u2705   Mark as Completed");
-            else                          completeBtn.setText("\u21A9   Revert to Pending");
+            if ("Pending".equals(status)) completeBtn.setText("\u2705  Mark as Completed");
+            else                          completeBtn.setText("\u21A9  Revert to Pending");
             completeBtn.setEnabled(true);
             feedbackBtn.setEnabled("Completed".equals(status));
             rightPane.revalidate();
@@ -1054,10 +973,10 @@ public class TechnicianDashboard extends JFrame {
                 FileHandler.saveAllAppointments(appointments);
                 model.setValueAt(newStatus, row, 4);
                 if ("Completed".equals(newStatus)) {
-                    completeBtn.setText("\u21A9   Revert to Pending");
+                    completeBtn.setText("\u21A9  Revert to Pending");
                     feedbackBtn.setEnabled(true);
                 } else {
-                    completeBtn.setText("\u2705   Mark as Completed");
+                    completeBtn.setText("\u2705  Mark as Completed");
                     feedbackBtn.setEnabled(false);
                 }
                 JOptionPane.showMessageDialog(this,
@@ -1106,22 +1025,16 @@ public class TechnicianDashboard extends JFrame {
         }
     }
 
-    private String initials(String fullName) {
-        if (fullName == null || fullName.isEmpty()) return "?";
-        String[] parts = fullName.trim().split("\\s+");
-        if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-        return (parts[0].charAt(0) + "" + parts[parts.length - 1].charAt(0)).toUpperCase();
-    }
-
+    //  SHARED HELPERS
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel lbl = new JLabel(label);
+        JLabel lbl = new JLabel(label + ":");
         lbl.setFont(new Font(F, Font.PLAIN, 13));
         lbl.setForeground(TEXT_MUTED);
-        lbl.setPreferredSize(new Dimension(110, 20));
+        lbl.setPreferredSize(new Dimension(100, 20));
         JLabel val = new JLabel(value);
         val.setFont(new Font(F, Font.BOLD, 13));
         val.setForeground(TEXT_PRIMARY);
@@ -1133,81 +1046,72 @@ public class TechnicianDashboard extends JFrame {
     private JButton makePrimaryButton(String label) {
         JButton btn = new JButton(label);
         btn.setFont(new Font(F, Font.BOLD, 13));
-        btn.setForeground(BG_DARK);
+        btn.setForeground(new Color(15, 17, 26));
         btn.setBackground(ACCENT);
-        btn.setBorder(new EmptyBorder(11, 20, 11, 20));
+        btn.setBorder(new EmptyBorder(10, 18, 10, 18));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) {
-                if (btn.isEnabled()) btn.setBackground(new Color(255, 178, 44));
-            }
-            @Override public void mouseExited(MouseEvent e) { btn.setBackground(ACCENT); }
-        });
         return btn;
     }
 
     private JButton makeSecondaryButton(String label) {
         JButton btn = new JButton(label);
         btn.setFont(new Font(F, Font.PLAIN, 13));
-        btn.setForeground(TEXT_PRIMARY);
+        btn.setForeground(TEXT_MUTED);
         btn.setBackground(BG_CARD2);
         btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(10, 16, 10, 16)));
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(8, 14, 8, 14)));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) {
-                if (btn.isEnabled()) btn.setBackground(BG_HOVER);
-            }
-            @Override public void mouseExited(MouseEvent e) { btn.setBackground(BG_CARD2); }
-        });
         return btn;
     }
 
+    // NAV BUTTON — Manager-style paintComponent highlight (glitch-free on Windows)
     private JButton makeNavButton(String label, String cardName) {
-        JButton btn = new JButton(label);
+        JButton btn = new JButton(label) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                    RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isArmed() || getModel().isSelected()) {
+                    g2.setColor(new Color(ACCENT.getRed(), ACCENT.getGreen(),
+                                          ACCENT.getBlue(), 40));
+                    g2.fillRect(0, 0, getWidth(), getHeight());
+                }
+                super.paintComponent(g);
+            }
+        };
         btn.setFont(new Font(F, Font.PLAIN, 14));
         btn.setForeground(TEXT_MUTED);
-        btn.setBackground(BG_CARD);
-        btn.setOpaque(true);
+        btn.setBackground(new Color(0, 0, 0, 0));
+        btn.setOpaque(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setBorder(new EmptyBorder(13, 18, 13, 18));
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        btn.setBorder(new EmptyBorder(12, 20, 12, 20));
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        if (activeNavButton == null) setNavActive(btn);
         btn.addActionListener(e -> {
-            setNavActive(btn);
+            btn.setForeground(TEXT_PRIMARY);
+            if (profileEditMode && !"PROFILE".equals(cardName)) {
+                int result = JOptionPane.showConfirmDialog(this,
+                        "You have unsaved changes. Discard them?",
+                        "Unsaved Changes",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (result != JOptionPane.YES_OPTION) return;
+                exitProfileEditMode();
+            }
             if ("DASHBOARD".equals(cardName)) refreshDashboard();
             else contentLayout.show(contentPanel, cardName);
         });
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) {
-                if (btn != activeNavButton) { btn.setBackground(BG_HOVER); btn.setForeground(TEXT_PRIMARY); }
-            }
-            @Override public void mouseExited(MouseEvent e) {
-                if (btn != activeNavButton) { btn.setBackground(BG_CARD); btn.setForeground(TEXT_MUTED); }
-            }
+            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
+            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_MUTED);   }
         });
         return btn;
-    }
-
-    private void setNavActive(JButton btn) {
-        if (activeNavButton != null) {
-            activeNavButton.setBackground(BG_CARD);
-            activeNavButton.setForeground(TEXT_MUTED);
-            activeNavButton.setBorder(new EmptyBorder(13, 18, 13, 18));
-        }
-        activeNavButton = btn;
-        btn.setBackground(ACCENT_SOFT);
-        btn.setForeground(ACCENT);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT),
-            new EmptyBorder(13, 15, 13, 18)));
     }
 
     private JTable makeStyledTable(DefaultTableModel model) {
@@ -1215,42 +1119,18 @@ public class TechnicianDashboard extends JFrame {
         table.setBackground(BG_CARD);
         table.setForeground(TEXT_PRIMARY);
         table.setFont(new Font(F, Font.PLAIN, 13));
-        table.setRowHeight(46);
-        table.setGridColor(BG_CARD);
-        table.setShowVerticalLines(false);
-        table.setShowHorizontalLines(true);
-        table.setIntercellSpacing(new Dimension(0, 1));
-        table.setSelectionBackground(ACCENT_SOFT);
+        table.setRowHeight(40);
+        table.setGridColor(BORDER_COLOR);
+        table.setSelectionBackground(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 60));
         table.setSelectionForeground(TEXT_PRIMARY);
+        table.setShowVerticalLines(false);
         table.setFillsViewportHeight(true);
-        DefaultTableCellRenderer cr = new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(JTable t, Object v,
-                    boolean sel, boolean foc, int r, int c) {
-                Component comp = super.getTableCellRendererComponent(t, v, sel, foc, r, c);
-                setBorder(new EmptyBorder(0, 14, 0, 8));
-                if (!sel) setBackground(r % 2 == 0 ? BG_CARD : new Color(26, 29, 43));
-                if (c == 4) {
-                    setForeground("Completed".equals(v) ? SUCCESS : ACCENT);
-                    setFont(new Font(F, Font.BOLD, 12));
-                } else {
-                    setForeground(sel ? TEXT_PRIMARY : TEXT_MUTED);
-                    setFont(new Font(F, Font.PLAIN, 13));
-                }
-                return comp;
-            }
-        };
-        for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setCellRenderer(cr);
-        }
         JTableHeader header = table.getTableHeader();
         header.setBackground(BG_CARD2);
-        header.setForeground(TEXT_FAINT);
-        header.setFont(new Font(F, Font.BOLD, 11));
+        header.setForeground(TEXT_MUTED);
+        header.setFont(new Font(F, Font.BOLD, 12));
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
         header.setReorderingAllowed(false);
-        header.setPreferredSize(new Dimension(0, 38));
-        ((DefaultTableCellRenderer) header.getDefaultRenderer())
-            .setHorizontalAlignment(SwingConstants.LEFT);
         return table;
     }
 
@@ -1259,46 +1139,6 @@ public class TechnicianDashboard extends JFrame {
         sp.setBackground(BG_CARD);
         sp.getViewport().setBackground(BG_CARD);
         sp.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
-        styleScrollBar(sp);
         return sp;
-    }
-
-    private void styleScrollBar(JScrollPane sp) {
-        sp.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
-            @Override protected void configureScrollBarColors() {
-                this.thumbColor = BG_HOVER;
-                this.trackColor = BG_DARK;
-            }
-            @Override protected JButton createDecreaseButton(int o) { return zeroButton(); }
-            @Override protected JButton createIncreaseButton(int o) { return zeroButton(); }
-            private JButton zeroButton() {
-                JButton b = new JButton();
-                b.setPreferredSize(new Dimension(0, 0));
-                b.setMaximumSize(new Dimension(0, 0));
-                b.setMinimumSize(new Dimension(0, 0));
-                return b;
-            }
-        });
-        sp.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
-    }
-
-    private static class RoundedPanel extends JPanel {
-        private final int radius;
-        private final Color fill;
-        RoundedPanel(int radius, Color fill) {
-            this.radius = radius;
-            this.fill = fill;
-            setOpaque(false);
-        }
-        @Override protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(fill);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
-            g2.setColor(BORDER_COLOR);
-            g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
-            g2.dispose();
-            super.paintComponent(g);
-        }
     }
 }

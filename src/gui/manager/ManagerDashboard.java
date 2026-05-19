@@ -181,7 +181,7 @@ public class ManagerDashboard extends JFrame {
 
         // Each nav item shows a different panel in the content area
         sidebar.add(makeNavButton("🏠  Home",           "HOME"));
-        sidebar.add(makeNavButton("�👥  Manage Users",    "USERS"));
+        sidebar.add(makeNavButton("👥  Manage Users",    "USERS"));
         sidebar.add(makeNavButton("💰  Service Prices",  "PRICES"));
         sidebar.add(makeNavButton("💬  Feedbacks",       "FEEDBACKS"));
         sidebar.add(makeNavButton("📊  Reports",         "REPORTS"));
@@ -2239,20 +2239,23 @@ public class ManagerDashboard extends JFrame {
         heading.setFont(new Font("SansSerif", Font.BOLD, 20));
         heading.setForeground(TEXT_PRIMARY);
 
-        JPanel statsRow = new JPanel(new GridLayout(1, 3, 10, 0));
+        JPanel statsRow = new JPanel(new GridLayout(1, 4, 10, 0));
         statsRow.setOpaque(false);
         statsRow.setPreferredSize(new Dimension(0, 72));
         statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
 
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         long totalAppointments = allAppointments.size();
+        long pending = allAppointments.stream()
+            .filter(a -> "Pending".equalsIgnoreCase(a.getStatus())).count();
         long completed = allAppointments.stream()
-            .filter(a -> "Completed".equals(a.getStatus())).count();
+            .filter(a -> "Completed".equalsIgnoreCase(a.getStatus())).count();
         double totalRevenue = calculateTotalRevenue();
 
         statsRow.add(makeCompactStatCard("Total Appointments", String.valueOf(totalAppointments), ACCENT));
+        statsRow.add(makeCompactStatCard("Pending", String.valueOf(pending), new Color(245, 158, 11)));
         statsRow.add(makeCompactStatCard("Completed", String.valueOf(completed), SUCCESS));
-        statsRow.add(makeCompactStatCard("Total Revenue", String.format("RM %.2f", totalRevenue), new Color(245, 158, 11)));
+        statsRow.add(makeCompactStatCard("Total Revenue", String.format("RM %.2f", totalRevenue), new Color(14, 165, 233)));
 
         JPanel headerBlock = new JPanel(new BorderLayout(0, 10));
         headerBlock.setOpaque(false);
@@ -2324,77 +2327,111 @@ public class ManagerDashboard extends JFrame {
         return scroll;
     }
 
-    /** Helper: Calculate total revenue based on service types and prices */
+    /** Helper: Calculate total revenue from paid payment records only */
     private double calculateTotalRevenue() {
-        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
-        java.util.Map<String, Double> servicePrices = FileHandler.loadAllServices();
-        double totalRevenue = 0.0;
-        for (Appointment apt : allAppointments) {
-            String serviceType = apt.getServiceType();
-            Double price = servicePrices.get(serviceType);
-            if (price != null) {
-                totalRevenue += price;
-            }
-        }
-        return totalRevenue;
+        return getPaidPayments().stream()
+            .mapToDouble(Payment::getAmount)
+            .sum();
     }
 
-    /** Helper: Get service count by type */
+    /** Helper: Load payments that have actually been paid */
+    private List<Payment> getPaidPayments() {
+        return FileHandler.loadAllPayments().stream()
+            .filter(p -> "Paid".equalsIgnoreCase(p.getStatus()))
+            .toList();
+    }
+
+    /** Helper: Get appointments by appointment ID */
+    private java.util.Map<String, Appointment> getAppointmentMap() {
+        java.util.Map<String, Appointment> appointmentMap = new java.util.LinkedHashMap<>();
+        for (Appointment apt : FileHandler.loadAllAppointments()) {
+            appointmentMap.putIfAbsent(apt.getAppointmentID(), apt);
+        }
+        return appointmentMap;
+    }
+
+    /** Helper: Get paid service count by type */
     private java.util.Map<String, Integer> getServiceCounts() {
-        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
+        java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Integer> serviceCounts = new java.util.LinkedHashMap<>();
-        for (Appointment apt : allAppointments) {
+        for (Payment payment : getPaidPayments()) {
+            Appointment apt = appointmentMap.get(payment.getAppointmentID());
+            if (apt == null) continue;
             String serviceType = apt.getServiceType();
             serviceCounts.put(serviceType, serviceCounts.getOrDefault(serviceType, 0) + 1);
         }
         return serviceCounts;
     }
 
-    /** Helper: Get revenue by service type */
+    /** Helper: Get paid revenue by service type */
     private java.util.Map<String, Double> getRevenueByService() {
-        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
-        java.util.Map<String, Double> servicePrices = FileHandler.loadAllServices();
+        java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Double> serviceRevenue = new java.util.LinkedHashMap<>();
-        for (Appointment apt : allAppointments) {
+        for (Payment payment : getPaidPayments()) {
+            Appointment apt = appointmentMap.get(payment.getAppointmentID());
+            if (apt == null) continue;
             String serviceType = apt.getServiceType();
-            Double price = servicePrices.get(serviceType);
-            serviceRevenue.put(serviceType, serviceRevenue.getOrDefault(serviceType, 0.0) + (price != null ? price : 0.0));
+            serviceRevenue.put(serviceType, serviceRevenue.getOrDefault(serviceType, 0.0) + payment.getAmount());
         }
         return serviceRevenue;
     }
 
-    /** Helper: Get revenue by technician (based on service prices) */
-    private java.util.Map<String, Double> getRevenueByTechnician() {
-        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
-        java.util.Map<String, Double> servicePrices = FileHandler.loadAllServices();
-        java.util.Map<String, Double> techRevenue = new java.util.LinkedHashMap<>();
-        
-        for (Appointment apt : allAppointments) {
+    /** Helper: Get paid appointment count by technician */
+    private java.util.Map<String, Integer> getPaidAppointmentCountsByTechnician() {
+        java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
+        java.util.Map<String, Integer> techAppointments = new java.util.LinkedHashMap<>();
+
+        for (Payment payment : getPaidPayments()) {
+            Appointment apt = appointmentMap.get(payment.getAppointmentID());
+            if (apt == null) continue;
             String techId = apt.getTechnicianID();
             if (techId != null && !techId.isEmpty()) {
-                String serviceType = apt.getServiceType();
-                Double price = servicePrices.get(serviceType);
-                if (price != null) {
-                    techRevenue.put(techId, techRevenue.getOrDefault(techId, 0.0) + price);
-                }
+                techAppointments.put(techId, techAppointments.getOrDefault(techId, 0) + 1);
+            }
+        }
+        return techAppointments;
+    }
+
+    /** Helper: Get paid revenue by technician */
+    private java.util.Map<String, Double> getRevenueByTechnician() {
+        java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
+        java.util.Map<String, Double> techRevenue = new java.util.LinkedHashMap<>();
+        
+        for (Payment payment : getPaidPayments()) {
+            Appointment apt = appointmentMap.get(payment.getAppointmentID());
+            if (apt == null) continue;
+            String techId = apt.getTechnicianID();
+            if (techId != null && !techId.isEmpty()) {
+                techRevenue.put(techId, techRevenue.getOrDefault(techId, 0.0) + payment.getAmount());
             }
         }
         return techRevenue;
     }
 
-    /** Helper: Get spending by customer (based on service prices) */
+    /** Helper: Get paid appointment count by customer */
+    private java.util.Map<String, Integer> getPaidAppointmentCountsByCustomer() {
+        java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
+        java.util.Map<String, Integer> customerAppointments = new java.util.LinkedHashMap<>();
+
+        for (Payment payment : getPaidPayments()) {
+            Appointment apt = appointmentMap.get(payment.getAppointmentID());
+            if (apt == null) continue;
+            String custId = apt.getCustomerID();
+            customerAppointments.put(custId, customerAppointments.getOrDefault(custId, 0) + 1);
+        }
+        return customerAppointments;
+    }
+
+    /** Helper: Get paid spending by customer */
     private java.util.Map<String, Double> getSpendingByCustomer() {
-        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
-        java.util.Map<String, Double> servicePrices = FileHandler.loadAllServices();
+        java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Double> customerSpent = new java.util.LinkedHashMap<>();
         
-        for (Appointment apt : allAppointments) {
+        for (Payment payment : getPaidPayments()) {
+            Appointment apt = appointmentMap.get(payment.getAppointmentID());
+            if (apt == null) continue;
             String custId = apt.getCustomerID();
-            String serviceType = apt.getServiceType();
-            Double price = servicePrices.get(serviceType);
-            if (price != null) {
-                customerSpent.put(custId, customerSpent.getOrDefault(custId, 0.0) + price);
-            }
+            customerSpent.put(custId, customerSpent.getOrDefault(custId, 0.0) + payment.getAmount());
         }
         return customerSpent;
     }
@@ -2405,8 +2442,8 @@ public class ManagerDashboard extends JFrame {
         panel.setBackground(BG_DARK);
 
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
-        long pending = allAppointments.stream().filter(a -> "Pending".equals(a.getStatus())).count();
-        long completedCount = allAppointments.stream().filter(a -> "Completed".equals(a.getStatus())).count();
+        long pending = allAppointments.stream().filter(a -> "Pending".equalsIgnoreCase(a.getStatus())).count();
+        long completedCount = allAppointments.stream().filter(a -> "Completed".equalsIgnoreCase(a.getStatus())).count();
 
         java.util.Map<String, Long> statusData = new java.util.LinkedHashMap<>();
         statusData.put("Pending", pending);
@@ -2426,7 +2463,7 @@ public class ManagerDashboard extends JFrame {
         ));
 
         JLabel summaryTitle = new JLabel("Summary Statistics");
-        summaryTitle.setFont(new Font("SansSerif", Font.BOLD, 13));
+        summaryTitle.setFont(new Font("SansSerif", Font.BOLD, 17));
         summaryTitle.setForeground(TEXT_PRIMARY);
         summaryTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         summaryPanel.add(summaryTitle);
@@ -2434,13 +2471,11 @@ public class ManagerDashboard extends JFrame {
 
         long totalApts = allAppointments.size();
         double completionRate = totalApts > 0 ? (completedCount * 100.0 / totalApts) : 0;
-        long uniqueCustomers = allAppointments.stream().map(Appointment::getCustomerID).distinct().count();
 
         addSummaryRow(summaryPanel, "Total Appointments:", String.valueOf(totalApts));
         addSummaryRow(summaryPanel, "Completed:", String.valueOf(completedCount));
         addSummaryRow(summaryPanel, "Pending:", String.valueOf(pending));
         addSummaryRow(summaryPanel, "Completion Rate:", String.format("%.1f%%", completionRate));
-        addSummaryRow(summaryPanel, "Unique Customers:", String.valueOf(uniqueCustomers));
 
         panel.add(summaryPanel, BorderLayout.CENTER);
         return panel;
@@ -2551,18 +2586,11 @@ public class ManagerDashboard extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
 
-        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         java.util.Map<String, Integer> techAppointments = new java.util.LinkedHashMap<>();
+        techAppointments.putAll(getPaidAppointmentCountsByTechnician());
         java.util.Map<String, Double> techRevenue = getRevenueByTechnician();
 
-        for (Appointment apt : allAppointments) {
-            String techId = apt.getTechnicianID();
-            if (techId != null && !techId.isEmpty()) {
-                techAppointments.put(techId, techAppointments.getOrDefault(techId, 0) + 1);
-            }
-        }
-
-        // Sort by appointments completed
+        // Sort by paid appointments completed
         java.util.List<String> sortedTechs = new java.util.ArrayList<>(techAppointments.keySet());
         sortedTechs.sort((a, b) -> techAppointments.get(b).compareTo(techAppointments.get(a)));
 
@@ -2594,14 +2622,9 @@ public class ManagerDashboard extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
 
-        List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         java.util.Map<String, Integer> customerAppointments = new java.util.LinkedHashMap<>();
+        customerAppointments.putAll(getPaidAppointmentCountsByCustomer());
         java.util.Map<String, Double> customerSpent = getSpendingByCustomer();
-
-        for (Appointment apt : allAppointments) {
-            String custId = apt.getCustomerID();
-            customerAppointments.put(custId, customerAppointments.getOrDefault(custId, 0) + 1);
-        }
 
         // Sort by total spent
         java.util.List<String> sortedCustomers = new java.util.ArrayList<>(customerAppointments.keySet());
@@ -2634,15 +2657,15 @@ public class ManagerDashboard extends JFrame {
     private void addSummaryRow(JPanel panel, String label, String value) {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
-        row.setBorder(new EmptyBorder(4, 0, 4, 0));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        row.setBorder(new EmptyBorder(6, 0, 6, 0));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
 
         JLabel lblLabel = new JLabel(label);
-        lblLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lblLabel.setFont(new Font("SansSerif", Font.PLAIN, 15));
         lblLabel.setForeground(TEXT_MUTED);
 
         JLabel lblValue = new JLabel(value);
-        lblValue.setFont(new Font("SansSerif", Font.BOLD, 13));
+        lblValue.setFont(new Font("SansSerif", Font.BOLD, 16));
         lblValue.setForeground(TEXT_PRIMARY);
 
         row.add(lblLabel, BorderLayout.WEST);

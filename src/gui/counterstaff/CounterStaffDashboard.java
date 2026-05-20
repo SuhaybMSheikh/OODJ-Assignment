@@ -17,6 +17,8 @@ import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * GUI CLASS — CounterStaffDashboard
@@ -107,6 +109,23 @@ public class CounterStaffDashboard extends JFrame {
         topBarUserLabel = new JLabel("👤  " + currentStaff.getFullName() + "  ·  Counter Staff");
         topBarUserLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
         topBarUserLabel.setForeground(TEXT_MUTED);
+        topBarUserLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        topBarUserLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                navigateToPanel("PROFILE");
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                topBarUserLabel.setForeground(TEXT_PRIMARY);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                topBarUserLabel.setForeground(TEXT_MUTED);
+            }
+        });
 
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -145,7 +164,7 @@ public class CounterStaffDashboard extends JFrame {
         sidebar.add(section);
         sidebar.add(Box.createVerticalStrut(12));
 
-        sidebar.add(makeNavButton("👤  My Profile", "PROFILE"));
+        sidebar.add(makeNavButton("🏠  Dashboard", "DASHBOARD"));
         sidebar.add(makeNavButton("💁‍♀️  Customers", "CUSTOMERS"));
         sidebar.add(makeNavButton("📅  Appointments", "APPOINTMENTS"));
         sidebar.add(makeNavButton("💳  Collect Payment", "PAYMENTS"));
@@ -160,13 +179,301 @@ public class CounterStaffDashboard extends JFrame {
         contentPanel = new JPanel(contentLayout);
         contentPanel.setBackground(BG_DARK);
 
+        contentPanel.add(buildDashboardPanel(), "DASHBOARD");
         contentPanel.add(buildProfilePanel(), "PROFILE");
         contentPanel.add(buildCustomersPanel(), "CUSTOMERS");
         contentPanel.add(buildAppointmentsPanel(), "APPOINTMENTS");
         contentPanel.add(buildPaymentsPanel(), "PAYMENTS");
 
-        contentLayout.show(contentPanel, "CUSTOMERS");
+        contentLayout.show(contentPanel, "DASHBOARD");
         return contentPanel;
+    }
+
+    private JPanel buildDashboardPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        JPanel headingPanel = new JPanel();
+        headingPanel.setLayout(new BoxLayout(headingPanel, BoxLayout.Y_AXIS));
+        headingPanel.setOpaque(false);
+        JLabel heading = new JLabel("Welcome, " + currentStaff.getFirstName());
+        heading.setFont(new Font("SansSerif", Font.BOLD, 22));
+        heading.setForeground(TEXT_PRIMARY);
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subheading = new JLabel("Here is today's summary.");
+        subheading.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        subheading.setForeground(TEXT_MUTED);
+        subheading.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        headingPanel.add(heading);
+        headingPanel.add(Box.createVerticalStrut(4));
+        headingPanel.add(subheading);
+        panel.add(headingPanel, BorderLayout.NORTH);
+
+        JPanel bodyPanel = new JPanel(new BorderLayout(0, 12));
+        bodyPanel.setOpaque(false);
+
+        String totalCustomers = "0";
+        String totalAppointments = "0";
+        String pendingAppointments = "0";
+        String revenueCollected = "RM 0.00";
+
+        try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+            int count = 0;
+            while (br.readLine() != null) {
+                count++;
+            }
+            totalCustomers = String.valueOf(count);
+        } catch (Exception ex) {
+            totalCustomers = "N/A";
+        }
+
+        try {
+            List<Appointment> appointments = FileHandler.loadAllAppointments();
+            totalAppointments = String.valueOf(appointments.size());
+            long pending = appointments.stream()
+                    .filter(a -> "Ongoing".equals(a.getStatus()))
+                    .count();
+            pendingAppointments = String.valueOf(pending);
+        } catch (Exception ex) {
+            totalAppointments = "0";
+            pendingAppointments = "0";
+        }
+
+        try {
+            double total = 0.0;
+            for (Payment payment : FileHandler.loadAllPayments()) {
+                total += payment.getAmount();
+            }
+            revenueCollected = "RM " + String.format("%.2f", total);
+        } catch (Exception ex) {
+            revenueCollected = "RM 0.00";
+        }
+
+        JPanel statsGrid = new JPanel(new GridLayout(1, 4, 12, 0));
+        statsGrid.setOpaque(false);
+        statsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+        statsGrid.setPreferredSize(new Dimension(0, 80));
+        statsGrid.add(makeStatCard("Total Customers", totalCustomers, new Color(56, 130, 246)));
+        statsGrid.add(makeStatCard("Total Appointments", totalAppointments, new Color(168, 85, 247)));
+        statsGrid.add(makeStatCard("Ongoing Appointments", pendingAppointments, new Color(245, 158, 11)));
+        statsGrid.add(makeStatCard("Revenue Collected", revenueCollected, new Color(34, 197, 94)));
+
+        bodyPanel.add(statsGrid, BorderLayout.NORTH);
+
+        java.util.function.Function<String, String> customerNameLookup = customerID -> {
+            try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String[] parts = line.split("\\|");
+                    if (parts.length >= 3 && parts[0].equals(customerID)) {
+                        return parts[1] + " " + parts[2];
+                    }
+                }
+            } catch (Exception ex) {
+                return customerID;
+            }
+            return customerID;
+        };
+
+        java.util.function.Function<DefaultTableModel, JTable> tableBuilder = model -> {
+            JTable table = new JTable(model);
+            table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                        boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    c.setBackground(row % 2 == 0 ? BG_CARD : BG_CARD2);
+                    c.setForeground(TEXT_PRIMARY);
+                    if (c instanceof JComponent) {
+                        ((JComponent) c).setBorder(new EmptyBorder(0, 6, 0, 6));
+                    }
+                    return c;
+                }
+            });
+            table.setBackground(BG_CARD);
+            table.setForeground(TEXT_PRIMARY);
+            table.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            table.setRowHeight(32);
+            table.setGridColor(BORDER_COLOR);
+            table.setShowVerticalLines(false);
+            table.setFillsViewportHeight(true);
+            JTableHeader header = table.getTableHeader();
+            header.setBackground(BG_CARD2);
+            header.setForeground(TEXT_MUTED);
+            header.setFont(new Font("SansSerif", Font.BOLD, 12));
+            header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
+            header.setReorderingAllowed(false);
+            return table;
+        };
+
+        java.util.function.Function<JTable, JScrollPane> scrollBuilder = table -> {
+            int calculatedHeight = Math.min(table.getRowHeight() * (table.getRowCount() + 1) + 4, 200);
+            table.setPreferredScrollableViewportSize(new Dimension(0, calculatedHeight));
+            JScrollPane scroll = new JScrollPane(table);
+            scroll.setBackground(BG_CARD);
+            scroll.getViewport().setBackground(BG_CARD);
+            scroll.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1, true));
+            scroll.setPreferredSize(new Dimension(0, calculatedHeight));
+            return scroll;
+        };
+
+        JPanel recentAppointmentsCard = new JPanel(new BorderLayout(0, 12));
+        recentAppointmentsCard.setBackground(BG_CARD);
+        recentAppointmentsCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT)),
+                new EmptyBorder(12, 12, 12, 12)));
+        JLabel recentAppointmentsTitle = new JLabel("Recent Appointments");
+        recentAppointmentsTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        recentAppointmentsTitle.setForeground(TEXT_PRIMARY);
+        DefaultTableModel recentAppointmentsModel = new DefaultTableModel(
+                new String[] { "Appt ID", "Customer", "Service", "Date", "Status" }, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        try {
+            List<Appointment> appointments = new ArrayList<>(FileHandler.loadAllAppointments());
+            java.util.Collections.sort(appointments, (a, b) -> b.getDate().compareTo(a.getDate()));
+            int limit = Math.min(5, appointments.size());
+            for (int i = 0; i < limit; i++) {
+                Appointment a = appointments.get(i);
+                recentAppointmentsModel.addRow(new Object[] {
+                        a.getAppointmentID(),
+                        customerNameLookup.apply(a.getCustomerID()),
+                        a.getServiceType(),
+                        a.getDate(),
+                        a.getStatus()
+                });
+            }
+        } catch (Exception ex) {
+            recentAppointmentsModel.setRowCount(0);
+        }
+        recentAppointmentsCard.add(recentAppointmentsTitle, BorderLayout.NORTH);
+        recentAppointmentsCard.add(scrollBuilder.apply(tableBuilder.apply(recentAppointmentsModel)), BorderLayout.CENTER);
+
+        JPanel paymentsCard = new JPanel(new BorderLayout(0, 12));
+        paymentsCard.setBackground(BG_CARD);
+        paymentsCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, new Color(34, 197, 94))),
+                new EmptyBorder(12, 12, 12, 12)));
+        JLabel paymentsTitle = new JLabel("Recent Payments");
+        paymentsTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        paymentsTitle.setForeground(TEXT_PRIMARY);
+        DefaultTableModel paymentsModel = new DefaultTableModel(
+                new String[] { "Payment ID", "Appt ID", "Amount (RM)", "Date", "Status" }, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        try {
+            List<Payment> payments = FileHandler.loadAllPayments();
+            int start = Math.max(0, payments.size() - 5);
+            for (int i = payments.size() - 1; i >= start; i--) {
+                Payment p = payments.get(i);
+                paymentsModel.addRow(new Object[] {
+                        p.getPaymentID(),
+                        p.getAppointmentID(),
+                        String.format("%.2f", p.getAmount()),
+                        p.getDate(),
+                        p.getStatus()
+                });
+            }
+        } catch (Exception ex) {
+            paymentsModel.setRowCount(0);
+        }
+        paymentsCard.add(paymentsTitle, BorderLayout.NORTH);
+        paymentsCard.add(scrollBuilder.apply(tableBuilder.apply(paymentsModel)), BorderLayout.CENTER);
+
+        JPanel servicePricesCard = new JPanel(new BorderLayout(0, 12));
+        servicePricesCard.setBackground(BG_CARD);
+        servicePricesCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, new Color(245, 158, 11))),
+                new EmptyBorder(12, 12, 12, 12)));
+        JLabel servicePricesTitle = new JLabel("Service Prices");
+        servicePricesTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        servicePricesTitle.setForeground(TEXT_PRIMARY);
+        JPanel servicePriceContent = new JPanel(new GridLayout(2, 1, 8, 8));
+        servicePriceContent.setOpaque(false);
+
+        try {
+            String[] serviceNames = { "Normal", "Major" };
+            for (String serviceName : serviceNames) {
+                double price = FileHandler.getServicePrice(serviceName);
+                int duration = FileHandler.getServiceDuration(serviceName);
+
+                JPanel priceRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+                priceRow.setOpaque(false);
+                priceRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+                JLabel nameLabel = new JLabel(serviceName);
+                nameLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+                nameLabel.setForeground(TEXT_MUTED);
+                JLabel priceLabel = new JLabel("RM " + String.format("%.2f", price));
+                priceLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+                priceLabel.setForeground(ACCENT);
+                JLabel durationLabel = new JLabel("( " + duration + " hour" + (duration > 1 ? "s" : "") + " )");
+                durationLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+                durationLabel.setForeground(TEXT_MUTED);
+                priceRow.add(nameLabel);
+                priceRow.add(priceLabel);
+                priceRow.add(durationLabel);
+                servicePriceContent.add(priceRow);
+            }
+        } catch (Exception ex) {
+            JLabel fallback = new JLabel("N/A");
+            fallback.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            fallback.setForeground(TEXT_MUTED);
+            servicePriceContent.add(fallback);
+        }
+        servicePricesCard.add(servicePricesTitle, BorderLayout.NORTH);
+        servicePricesCard.add(servicePriceContent, BorderLayout.CENTER);
+
+        JPanel myBookingsCard = new JPanel(new BorderLayout(0, 12));
+        myBookingsCard.setBackground(BG_CARD);
+        myBookingsCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, new Color(56, 130, 246))),
+                new EmptyBorder(12, 12, 12, 12)));
+        JLabel myBookingsTitle = new JLabel("My Bookings");
+        myBookingsTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
+        myBookingsTitle.setForeground(TEXT_PRIMARY);
+        DefaultTableModel myBookingsModel = new DefaultTableModel(
+                new String[] { "Appt ID", "Customer", "Date", "Status" }, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        try {
+            List<Appointment> appointments = new ArrayList<>(FileHandler.loadAllAppointments());
+            appointments.removeIf(a -> !currentStaff.getUserID().equals(a.getCounterStaffID()));
+            java.util.Collections.sort(appointments, (a, b) -> b.getDate().compareTo(a.getDate()));
+            for (Appointment a : appointments) {
+                myBookingsModel.addRow(new Object[] {
+                        a.getAppointmentID(),
+                        customerNameLookup.apply(a.getCustomerID()),
+                        a.getDate(),
+                        a.getStatus()
+                });
+            }
+        } catch (Exception ex) {
+            myBookingsModel.setRowCount(0);
+        }
+        myBookingsCard.add(myBookingsTitle, BorderLayout.NORTH);
+        myBookingsCard.add(scrollBuilder.apply(tableBuilder.apply(myBookingsModel)), BorderLayout.CENTER);
+
+        JPanel contentGrid = new JPanel(new GridLayout(2, 2, 12, 12));
+        contentGrid.setOpaque(false);
+        contentGrid.add(recentAppointmentsCard);
+        contentGrid.add(paymentsCard);
+        contentGrid.add(servicePricesCard);
+        contentGrid.add(myBookingsCard);
+
+        bodyPanel.add(contentGrid, BorderLayout.CENTER);
+        panel.add(bodyPanel, BorderLayout.CENTER);
+        return panel;
     }
 
     // PANEL 1 — MY PROFILE
@@ -1034,7 +1341,7 @@ public class CounterStaffDashboard extends JFrame {
      */
     private void showNewAppointmentDialog(DefaultTableModel tableModel) {
         JDialog dialog = new JDialog(this, "New Appointment", true);
-        dialog.setSize(460, 460);
+        dialog.setSize(460, 520);
         dialog.setLocationRelativeTo(this);
         dialog.setResizable(false);
 
@@ -1171,6 +1478,39 @@ public class CounterStaffDashboard extends JFrame {
         content.add(makeDialogFieldRow("Date", dateField));
         content.add(Box.createVerticalStrut(8));
         content.add(makeDialogFieldRow("Time", timeField));
+
+        JButton suggestSlotBtn = makeSecondaryButton("⚡ Suggest Next Available Slot");
+        suggestSlotBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        suggestSlotBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        suggestSlotBtn.addActionListener(e -> {
+            List<Appointment> allAppointments = FileHandler.loadAllAppointments();
+
+            Set<String> bookedDates = allAppointments.stream()
+                    .map(Appointment::getDate)
+                    .collect(Collectors.toSet());
+
+            LocalDate checkDate = LocalDate.now().plusDays(1);
+
+            while (bookedDates.contains(checkDate.toString())) {
+                checkDate = checkDate.plusDays(1);
+            }
+
+            dateField.setText(checkDate.toString());
+            dateField.setForeground(TEXT_PRIMARY);
+            timeField.setText("09:00");
+            timeField.setForeground(TEXT_PRIMARY);
+            refreshTechs.run();
+
+            JOptionPane.showMessageDialog(dialog,
+                    "Next available date: " + checkDate.toString() + " at 09:00 AM\n" +
+                    "This date has no appointments scheduled.\n" +
+                    "You can modify if needed.",
+                    "Slot Suggested",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        content.add(Box.createVerticalStrut(12));
+        content.add(suggestSlotBtn);
         content.add(Box.createVerticalStrut(8));
         content.add(makeDialogComboRow("Technician", techCombo));
         content.add(Box.createVerticalStrut(12));
@@ -1226,7 +1566,7 @@ public class CounterStaffDashboard extends JFrame {
 
             String apptID = FileHandler.generateNextAppointmentID();
             Appointment newAppt = new Appointment(apptID, customerID, technicianID,
-                    date, time, serviceType, "Pending", currentStaff.getUserID());
+                    date, time, serviceType, "Ongoing", currentStaff.getUserID());
 
             List<Appointment> appointments = FileHandler.loadAllAppointments();
             appointments.add(newAppt);
@@ -1529,6 +1869,37 @@ public class CounterStaffDashboard extends JFrame {
     }
 
     // SHARED HELPERS
+    private JPanel makeStatCard(String title, String value, Color valueColor) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, valueColor)),
+                new EmptyBorder(12, 12, 12, 12)));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        titleLabel.setForeground(TEXT_MUTED);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(new Font("SansSerif", Font.BOLD, 28));
+        valueLabel.setForeground(valueColor);
+        valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel valueBadge = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        valueBadge.setOpaque(true);
+        valueBadge.setBackground(new Color(valueColor.getRed(), valueColor.getGreen(), valueColor.getBlue(), 30));
+        valueBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        valueBadge.add(valueLabel);
+
+        card.add(titleLabel);
+        card.add(valueBadge);
+        return card;
+    }
+
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);
@@ -1569,6 +1940,20 @@ public class CounterStaffDashboard extends JFrame {
         return btn;
     }
 
+    private void navigateToPanel(String cardName) {
+        if (profileEditMode) {
+            int result = JOptionPane.showConfirmDialog(this,
+                    "You have unsaved changes. Discard them?",
+                    "Unsaved Changes",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (result != JOptionPane.YES_OPTION)
+                return;
+            exitProfileEditMode();
+        }
+        contentLayout.show(contentPanel, cardName);
+    }
+
     private JButton makeNavButton(String label, String cardName) {
         JButton btn = new JButton(label);
         btn.setFont(new Font("SansSerif", Font.PLAIN, 14));
@@ -1582,21 +1967,7 @@ public class CounterStaffDashboard extends JFrame {
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> {
-            // Warn user if profile is in edit mode with unsaved changes
-            if (profileEditMode) {
-                int result = JOptionPane.showConfirmDialog(this,
-                        "You have unsaved changes. Discard them?",
-                        "Unsaved Changes",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE);
-                if (result != JOptionPane.YES_OPTION)
-                    return;
-                // Exit edit mode without saving
-                exitProfileEditMode();
-            }
-            contentLayout.show(contentPanel, cardName);
-        });
+        btn.addActionListener(e -> navigateToPanel(cardName));
         btn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {

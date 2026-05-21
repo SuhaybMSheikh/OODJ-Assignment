@@ -14,6 +14,7 @@ import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.Arc2D;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -570,10 +571,17 @@ public class CounterStaffDashboard extends JFrame {
             usernameLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
             usernameLbl.setForeground(TEXT_MUTED);
             usernameLbl.setPreferredSize(new Dimension(100, 20));
-            usernameField = makeEditableTextField(currentStaff.getUsername());
+            usernameField = makeLockedTextField(currentStaff.getUsername());
             usernameRow.add(usernameLbl, BorderLayout.WEST);
             usernameRow.add(usernameField, BorderLayout.CENTER);
             profileCard.add(usernameRow);
+            JLabel usernameNote = new JLabel("Username cannot be changed.");
+            usernameNote.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            usernameNote.setForeground(TEXT_MUTED);
+            usernameNote.setBorder(new EmptyBorder(0, 116, 0, 0));
+            usernameNote.setAlignmentX(Component.LEFT_ALIGNMENT);
+            profileCard.add(Box.createVerticalStrut(4));
+            profileCard.add(usernameNote);
             profileCard.add(Box.createVerticalStrut(12));
 
             // Email field
@@ -614,29 +622,34 @@ public class CounterStaffDashboard extends JFrame {
             passwordLbl.setPreferredSize(new Dimension(100, 20));
 
             passwordField = makeEditableTextField(maskPassword(currentStaff.getPassword()));
+            passwordField.setBorder(new EmptyBorder(0, 0, 0, 0));
+            passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            passwordField.setPreferredSize(new Dimension(0, 28));
 
             JPanel passwordFieldPanel = new JPanel(new BorderLayout(8, 0));
-            passwordFieldPanel.setOpaque(false);
+            passwordFieldPanel.setBackground(BG_CARD2);
+            passwordFieldPanel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+            passwordFieldPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+            passwordFieldPanel.setPreferredSize(new Dimension(0, 34));
             passwordFieldPanel.add(passwordField, BorderLayout.CENTER);
 
-            JButton eyeToggle = new JButton("👁");
-            eyeToggle.setFont(new Font("SansSerif", Font.PLAIN, 16));
-            eyeToggle.setBackground(new Color(0, 0, 0, 0));
+            JButton eyeToggle = new JButton(makeEyeIcon(TEXT_MUTED));
+            eyeToggle.setForeground(TEXT_MUTED);
+            eyeToggle.setBackground(BG_CARD2);
             eyeToggle.setOpaque(false);
             eyeToggle.setBorderPainted(false);
             eyeToggle.setFocusPainted(false);
             eyeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            eyeToggle.setPreferredSize(new Dimension(30, 28));
+            eyeToggle.setPreferredSize(new Dimension(38, 28));
             eyeToggle.addActionListener(e -> {
                 passwordVisible = !passwordVisible;
-                String currentText = passwordField.getText();
                 if (passwordVisible) {
-                    eyeToggle.setText("🙈");
-                    // Remove masking to show actual password
+                    eyeToggle.setForeground(TEXT_PRIMARY);
+                    eyeToggle.setIcon(makeEyeIcon(TEXT_PRIMARY));
                     passwordField.setText(currentStaff.getPassword());
                 } else {
-                    eyeToggle.setText("👁");
-                    // Apply masking
+                    eyeToggle.setForeground(TEXT_MUTED);
+                    eyeToggle.setIcon(makeEyeIcon(TEXT_MUTED));
                     passwordField.setText(maskPassword(currentStaff.getPassword()));
                 }
             });
@@ -701,6 +714,38 @@ public class CounterStaffDashboard extends JFrame {
         return field;
     }
 
+    private JTextField makeLockedTextField(String value) {
+        JTextField field = new JTextField(value);
+        field.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        field.setBackground(BG_CARD2);
+        field.setForeground(TEXT_MUTED);
+        field.setEditable(false);
+        field.setFocusable(false);
+        field.setCursor(Cursor.getDefaultCursor());
+        field.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        field.setMaximumSize(new Dimension(200, 28));
+        field.setPreferredSize(new Dimension(200, 28));
+        return field;
+    }
+
+    private Icon makeEyeIcon(Color color) {
+        return new Icon() {
+            @Override public int getIconWidth() { return 18; }
+            @Override public int getIconHeight() { return 12; }
+
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.setStroke(new BasicStroke(1.8f));
+                g2.draw(new Arc2D.Double(x + 1, y + 1, 16, 10, 0, 180, Arc2D.OPEN));
+                g2.draw(new Arc2D.Double(x + 1, y + 1, 16, 10, 180, 180, Arc2D.OPEN));
+                g2.fillOval(x + 7, y + 4, 4, 4);
+                g2.dispose();
+            }
+        };
+    }
+
     /**
      * Enter edit mode: clear the error message and refresh UI.
      */
@@ -738,15 +783,13 @@ public class CounterStaffDashboard extends JFrame {
         // Validate: no field should be empty
         String firstName = firstNameField.getText().trim();
         String lastName = lastNameField.getText().trim();
-        String username = usernameField.getText().trim();
         String email = emailField.getText().trim();
         String phone = phoneField.getText().trim();
         // Get password (it might be masked, so use the original from currentStaff if
         // masked)
         String password = passwordVisible ? passwordField.getText().trim() : currentStaff.getPassword();
 
-        if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty() ||
-                email.isEmpty() || phone.isEmpty()) {
+        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty()) {
             errorMsg.setText("❌ All fields are required.");
             profileCard.revalidate();
             profileCard.repaint();
@@ -783,7 +826,6 @@ public class CounterStaffDashboard extends JFrame {
         // Update the user's details
         userToUpdate.setFirstName(firstName);
         userToUpdate.setLastName(lastName);
-        userToUpdate.setUsername(username);
         userToUpdate.setEmail(email);
         userToUpdate.setPhone(phone);
         // Update password if it was changed (not masked)
@@ -797,7 +839,6 @@ public class CounterStaffDashboard extends JFrame {
         // Update the currentStaff object in memory
         currentStaff.setFirstName(firstName);
         currentStaff.setLastName(lastName);
-        currentStaff.setUsername(username);
         currentStaff.setEmail(email);
         currentStaff.setPhone(phone);
         // Update password if it was changed (not masked)

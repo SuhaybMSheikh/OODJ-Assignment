@@ -1613,6 +1613,11 @@ public class CounterStaffDashboard extends JFrame {
             appointments.add(newAppt);
             FileHandler.saveAllAppointments(appointments);
 
+            double serviceFee = FileHandler.getServicePrice(serviceType);
+            List<Payment> payments = FileHandler.loadAllPayments();
+            payments.add(new Payment(FileHandler.generateNextPaymentID(), apptID, serviceFee, date, "Pending"));
+            FileHandler.saveAllPayments(payments);
+
             refreshAppointmentsTable(tableModel);
             dialog.dispose();
         });
@@ -1728,7 +1733,7 @@ public class CounterStaffDashboard extends JFrame {
                 String apptID = (String) table.getValueAt(row, 1);
                 String customerName = (String) table.getValueAt(row, 2);
                 String serviceType = (String) table.getValueAt(row, 3);
-                double amount = FileHandler.getServicePrice(serviceType);
+                double amount = Double.parseDouble(table.getValueAt(row, 5).toString());
                 showCollectPaymentDialog(model, apptID, customerName, serviceType, amount);
             }
         });
@@ -1763,6 +1768,9 @@ public class CounterStaffDashboard extends JFrame {
 
         List<Appointment> allAppts = FileHandler.loadAllAppointments();
         List<Payment> allPayments = FileHandler.loadAllPayments();
+        Set<String> paymentAppointmentIDs = allPayments.stream()
+                .map(Payment::getAppointmentID)
+                .collect(Collectors.toSet());
 
         // 1. Load data from Payments
         for (Payment p : allPayments) {
@@ -1783,7 +1791,8 @@ public class CounterStaffDashboard extends JFrame {
 
         // 2. Load Completed (but not paid) appointments
         for (Appointment a : allAppts) {
-            if ("Completed".equalsIgnoreCase(a.getStatus())) {
+            if ("Completed".equalsIgnoreCase(a.getStatus())
+                    && !paymentAppointmentIDs.contains(a.getAppointmentID())) {
                 String cName = custNames.getOrDefault(a.getCustomerID(), a.getCustomerID());
                 double amt = FileHandler.getServicePrice(a.getServiceType());
                 model.addRow(new Object[] {
@@ -1837,16 +1846,27 @@ public class CounterStaffDashboard extends JFrame {
         cancelBtn.addActionListener(e -> dialog.dispose());
 
         confirmBtn.addActionListener(e -> {
-            String paymentID = FileHandler.generateNextPaymentID();
             String date = LocalDate.now().toString();
+            String paymentID = null;
 
-            // Create new Payment and save
-            Payment newPayment = new Payment(paymentID, apptID, amount, date, "Paid");
             List<Payment> payments = FileHandler.loadAllPayments();
-            payments.add(newPayment);
+            boolean existingPaymentUpdated = false;
+            for (Payment payment : payments) {
+                if (payment.getAppointmentID().equals(apptID)) {
+                    paymentID = payment.getPaymentID();
+                    payment.setAmount(amount);
+                    payment.setDate(date);
+                    payment.setStatus("Paid");
+                    existingPaymentUpdated = true;
+                    break;
+                }
+            }
+            if (!existingPaymentUpdated) {
+                paymentID = FileHandler.generateNextPaymentID();
+                payments.add(new Payment(paymentID, apptID, amount, date, "Paid"));
+            }
             FileHandler.saveAllPayments(payments);
 
-            // Update Appointment status to Paid
             List<Appointment> appts = FileHandler.loadAllAppointments();
             for (Appointment a : appts) {
                 if (a.getAppointmentID().equals(apptID)) {

@@ -259,7 +259,7 @@ public class CustomerDashboard extends JFrame {
             Payment payment = paymentByAppointment.get(appt.getAppointmentID());
             if (payment != null && "Paid".equalsIgnoreCase(payment.getStatus())) {
                 totalSpent += payment.getAmount();
-            } else {
+            } else if ("Completed".equalsIgnoreCase(appt.getStatus())) {
                 outstandingAmount += payment != null
                     ? payment.getAmount()
                     : FileHandler.getServicePrice(appt.getServiceType());
@@ -677,6 +677,10 @@ public class CustomerDashboard extends JFrame {
         return "*".repeat(password.length());
     }
 
+    private boolean isAlphabeticName(String name) {
+        return name.matches("[A-Za-z]+");
+    }
+
     private void onProfileSave() {
         String firstName = firstNameField.getText().trim();
         String lastName = lastNameField.getText().trim();
@@ -686,6 +690,13 @@ public class CustomerDashboard extends JFrame {
 
         if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty()) {
             errorMsg.setText("❌ All fields are required.");
+            profileCard.revalidate();
+            profileCard.repaint();
+            return;
+        }
+
+        if (!isAlphabeticName(firstName) || !isAlphabeticName(lastName)) {
+            errorMsg.setText("Full name must contain alphabets only.");
             profileCard.revalidate();
             profileCard.repaint();
             return;
@@ -773,7 +784,6 @@ public class CustomerDashboard extends JFrame {
         // Build lookup maps once to avoid repeated scans for each row.
         List<Comment> comments = FileHandler.loadAllComments();
         List<model.Payment> payments = FileHandler.loadAllPayments();
-        Map<String, Double> serviceFees = FileHandler.loadAllServices();
         Map<String, String> commentByAppointment = new HashMap<>();
         Map<String, model.Payment> paymentByAppointment = new HashMap<>();
 
@@ -787,8 +797,10 @@ public class CustomerDashboard extends JFrame {
                 a.getAppointmentID(), "No comment yet"
             );
 
-            double fee = serviceFees.getOrDefault(a.getServiceType(), 0.0);
             model.Payment payment = paymentByAppointment.get(a.getAppointmentID());
+            double fee = payment != null
+                ? payment.getAmount()
+                : FileHandler.getServicePrice(a.getServiceType());
             String payStatus;
             if (payment == null) {
                 payStatus = "Unpaid";

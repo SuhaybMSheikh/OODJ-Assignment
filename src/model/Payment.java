@@ -39,4 +39,5 @@ public class Payment {
     // SETTERS
     public void setStatus(String status) { this.status = status; }
     public void setAmount(double amount) { this.amount = amount; }
+    public void setDate(String date)     { this.date = date; }
 }

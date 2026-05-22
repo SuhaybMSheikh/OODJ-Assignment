@@ -2,6 +2,7 @@ package gui.technician;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.Arc2D;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -630,24 +631,37 @@ public class TechnicianDashboard extends JFrame {
             passwordLbl.setForeground(TEXT_MUTED);
             passwordLbl.setPreferredSize(new Dimension(100, 20));
             passwordField = makeEditableTextField(maskPassword(currentTech.getPassword()));
+            passwordField.setBorder(new EmptyBorder(0, 0, 0, 0));
             JPanel passwordFieldPanel = new JPanel(new BorderLayout(8, 0));
-            passwordFieldPanel.setOpaque(false);
+            passwordFieldPanel.setBackground(BG_CARD2);
+            passwordFieldPanel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+            passwordFieldPanel.setMaximumSize(new Dimension(200, 28));
+            passwordFieldPanel.setPreferredSize(new Dimension(200, 28));
             passwordFieldPanel.add(passwordField, BorderLayout.CENTER);
-            JButton eyeToggle = new JButton("\uD83D\uDC41");
-            eyeToggle.setFont(new Font(F, Font.PLAIN, 16));
-            eyeToggle.setBackground(new Color(0, 0, 0, 0));
+            JButton eyeToggle = new JButton(makeEyeIcon(TEXT_MUTED));
+            eyeToggle.setForeground(TEXT_MUTED);
+            eyeToggle.setBackground(BG_CARD2);
             eyeToggle.setOpaque(false);
+            eyeToggle.setContentAreaFilled(false);
             eyeToggle.setBorderPainted(false);
             eyeToggle.setFocusPainted(false);
             eyeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            eyeToggle.setPreferredSize(new Dimension(30, 28));
+            eyeToggle.setPreferredSize(new Dimension(38, 28));
+            eyeToggle.setToolTipText("Show password");
+            eyeToggle.getAccessibleContext().setAccessibleName("Show password");
             eyeToggle.addActionListener(e -> {
                 passwordVisible = !passwordVisible;
                 if (passwordVisible) {
-                    eyeToggle.setText("\uD83D\uDE48");
+                    eyeToggle.setForeground(TEXT_PRIMARY);
+                    eyeToggle.setIcon(makeEyeIcon(TEXT_PRIMARY));
+                    eyeToggle.setToolTipText("Hide password");
+                    eyeToggle.getAccessibleContext().setAccessibleName("Hide password");
                     passwordField.setText(currentTech.getPassword());
                 } else {
-                    eyeToggle.setText("\uD83D\uDC41");
+                    eyeToggle.setForeground(TEXT_MUTED);
+                    eyeToggle.setIcon(makeEyeIcon(TEXT_MUTED));
+                    eyeToggle.setToolTipText("Show password");
+                    eyeToggle.getAccessibleContext().setAccessibleName("Show password");
                     passwordField.setText(maskPassword(currentTech.getPassword()));
                 }
             });
@@ -696,6 +710,24 @@ public class TechnicianDashboard extends JFrame {
             }
         });
         return field;
+    }
+
+    private Icon makeEyeIcon(Color color) {
+        return new Icon() {
+            @Override public int getIconWidth() { return 18; }
+            @Override public int getIconHeight() { return 12; }
+
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.setStroke(new BasicStroke(1.8f));
+                g2.draw(new Arc2D.Double(x + 1, y + 1, 16, 10, 0, 180, Arc2D.OPEN));
+                g2.draw(new Arc2D.Double(x + 1, y + 1, 16, 10, 180, 180, Arc2D.OPEN));
+                g2.fillOval(x + 7, y + 4, 4, 4);
+                g2.dispose();
+            }
+        };
     }
 
     private void enterProfileEditMode() {

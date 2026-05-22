@@ -113,7 +113,7 @@ public class LoginFrame extends JFrame {
         brandBox.setLayout(new BoxLayout(brandBox, BoxLayout.Y_AXIS));
         brandBox.setOpaque(false);
 
-        JPanel logo = buildLogo(96);
+        JPanel logo = buildLogo(150);
         logo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel titleLbl = new JLabel("APU – ASC");
@@ -232,7 +232,7 @@ public class LoginFrame extends JFrame {
             }
         });
 
-        JPanel logoSmall = buildLogo(64);
+        JPanel logoSmall = buildLogo(125);
         logoSmall.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         roleLabel = new JLabel("Logging in as ...");
@@ -316,7 +316,7 @@ public class LoginFrame extends JFrame {
 
 
     //  APU LOGO
-    //  Clips logo_apu.jpg into a square with a gold ring border
+    //  Clips logo_apu.jpg into a circle with a gold ring border
     private JPanel buildLogo(int size) {
     JPanel square = new JPanel() {
         @Override protected void paintComponent(Graphics g) {
@@ -327,14 +327,18 @@ public class LoginFrame extends JFrame {
                                 RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             int w = getWidth();
             int h = getHeight();
+            Shape oldClip = g2.getClip();
+            Ellipse2D.Double circle = new Ellipse2D.Double(0, 0, w - 1, h - 1);
 
             if (logoImage != null) {
-                // Step 1: Draw the image as a square
+                // Step 1: Draw the image inside a circle
+                g2.setClip(circle);
                 g2.drawImage(logoImage, 0, 0, w, h, null);
+                g2.setClip(oldClip);
             } else {
-                // Fallback: navy square with "APU" text
+                // Fallback: navy circle with "APU" text
                 g2.setColor(BG_CARD);
-                g2.fillRect(0, 0, w, h);
+                g2.fill(circle);
                 g2.setColor(TEXT_PRIMARY);
                 g2.setFont(new Font("SansSerif", Font.BOLD, size / 4));
                 FontMetrics fm = g2.getFontMetrics();
@@ -343,10 +347,10 @@ public class LoginFrame extends JFrame {
                     (h - fm.getHeight()) / 2 + fm.getAscent());
             }
 
-            // Step 2: gold square border
+            // Step 2: gold circular border
             g2.setColor(ACCENT);
             g2.setStroke(new BasicStroke(2.5f));
-            g2.drawRect(0, 0, w - 1, h - 1);
+            g2.draw(circle);
         }
         @Override public Dimension getPreferredSize() { return new Dimension(size, size); }
         @Override public Dimension getMinimumSize()   { return getPreferredSize(); }

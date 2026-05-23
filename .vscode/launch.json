@@ -6,6 +6,13 @@
             "name": "Main",
             "request": "launch",
             "mainClass": "main.Main",
+            "projectName": "OODJ-Assignment_888edf6b"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "main.Main",
             "projectName": "OODJ-Assignment-1_d450c743"
         },
         {

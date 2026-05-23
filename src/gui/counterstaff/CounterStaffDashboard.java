@@ -38,10 +38,10 @@ public class CounterStaffDashboard extends JFrame {
 
     // COLOURS
     private static final Color BG_DARK = new Color(15, 17, 26);
-    private static final Color BG_CARD = new Color(24, 27, 42);
+    private static final Color BG_CARD = new Color(0, 0, 0);
     private static final Color BG_CARD2 = new Color(30, 34, 52);
     private static final Color ACCENT = new Color(20, 184, 166);
-    private static final Color TEXT_PRIMARY = new Color(240, 241, 255);
+    private static final Color TEXT_PRIMARY = new Color(255, 255, 255);
     private static final Color TEXT_MUTED = new Color(148, 151, 180);
     private static final Color BORDER_COLOR = new Color(55, 58, 80);
     private static final Color DANGER = new Color(239, 68, 68);
@@ -52,6 +52,9 @@ public class CounterStaffDashboard extends JFrame {
     // LAYOUT
     private CardLayout contentLayout;
     private JPanel contentPanel;
+    private String activeCardName = "DASHBOARD";
+    private List<JButton> navButtons = new ArrayList<>();
+    private JPanel dashboardPanel;
 
     // TOP BAR COMPONENT (stored for updating)
     private JLabel topBarUserLabel;
@@ -155,8 +158,21 @@ public class CounterStaffDashboard extends JFrame {
         sidebar.setBackground(BG_CARD);
         sidebar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
-                new EmptyBorder(24, 0, 24, 0)));
+                new EmptyBorder(6, 0, 24, 0)));
         sidebar.setPreferredSize(new Dimension(220, 0));
+
+        ImageIcon logoIcon = new ImageIcon("src/data/apu_logo_topPanel.png");
+        Image scaledLogo = logoIcon.getImage().getScaledInstance(192, 128, Image.SCALE_SMOOTH);
+        JLabel logoLabel = new JLabel(new ImageIcon(scaledLogo));
+        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        logoPanel.setOpaque(false);
+        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 128));
+        logoPanel.add(logoLabel);
+        sidebar.add(logoPanel);
+        sidebar.add(Box.createVerticalStrut(14));
 
         JLabel section = new JLabel("  COUNTER STAFF MENU");
         section.setFont(new Font("SansSerif", Font.BOLD, 10));
@@ -180,7 +196,8 @@ public class CounterStaffDashboard extends JFrame {
         contentPanel = new JPanel(contentLayout);
         contentPanel.setBackground(BG_DARK);
 
-        contentPanel.add(buildDashboardPanel(), "DASHBOARD");
+        dashboardPanel = buildDashboardPanel();
+        contentPanel.add(dashboardPanel, "DASHBOARD");
         contentPanel.add(buildProfilePanel(), "PROFILE");
         contentPanel.add(buildCustomersPanel(), "CUSTOMERS");
         contentPanel.add(buildAppointmentsPanel(), "APPOINTMENTS");
@@ -449,7 +466,7 @@ public class CounterStaffDashboard extends JFrame {
         };
         try {
             List<Appointment> appointments = new ArrayList<>(FileHandler.loadAllAppointments());
-            appointments.removeIf(a -> !currentStaff.getUserID().equals(a.getCounterStaffID()));
+            appointments.removeIf(a -> !isBookedByCurrentStaff(a));
             java.util.Collections.sort(appointments, (a, b) -> b.getDate().compareTo(a.getDate()));
             for (Appointment a : appointments) {
                 myBookingsModel.addRow(new Object[] {
@@ -1056,7 +1073,11 @@ public class CounterStaffDashboard extends JFrame {
 
             if (fn.isEmpty() || ln.isEmpty() || em.isEmpty() || ph.isEmpty()
                     || un.isEmpty() || pw.isEmpty()) {
-                errLbl.setText("❌ All fields are required.");
+                errLbl.setText("All fields are required.");
+                return;
+            }
+            if (!em.contains("@")) {
+                errLbl.setText("Invalid email. Email must contain '@'.");
                 return;
             }
 
@@ -1357,19 +1378,9 @@ public class CounterStaffDashboard extends JFrame {
             System.err.println("Error reading customers.txt: " + ex.getMessage());
         }
 
-        // Build technician name lookup from users.txt
-        java.util.Map<String, String> techNames = new java.util.HashMap<>();
-        for (User u : FileHandler.loadAllUsers()) {
-            if ("Technician".equals(u.getRole())) {
-                techNames.put(u.getUserID(), u.getFullName());
-            }
-        }
-
         for (Appointment a : FileHandler.loadAllAppointments()) {
             String custName = customerNames.getOrDefault(a.getCustomerID(), a.getCustomerID());
-            String techName = (a.getTechnicianID() == null || a.getTechnicianID().isEmpty())
-                    ? "Unassigned"
-                    : techNames.getOrDefault(a.getTechnicianID(), "Unassigned");
+            String techName = resolveTechnicianDisplayName(a.getTechnicianID());
             model.addRow(new Object[] {
                     a.getAppointmentID(), custName, techName,
                     a.getDate(), a.getTime(), a.getServiceType(), a.getStatus()
@@ -1445,26 +1456,15 @@ public class CounterStaffDashboard extends JFrame {
             }
         });
 
-        // --- Time field with placeholder ---
-        JTextField timeField = makeEditableTextField("");
-        timeField.setText("HH:MM");
-        timeField.setForeground(TEXT_MUTED);
-        timeField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (timeField.getText().equals("HH:MM")) {
-                    timeField.setText("");
-                    timeField.setForeground(TEXT_PRIMARY);
-                }
+        // --- Time slot combo ---
+        JComboBox<String> timeCombo = new JComboBox<>();
+        for (int hour = 8; hour <= 17; hour++) {
+            timeCombo.addItem(String.format("%02d:00", hour));
+            if (hour < 17) {
+                timeCombo.addItem(String.format("%02d:30", hour));
             }
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (timeField.getText().trim().isEmpty()) {
-                    timeField.setText("HH:MM");
-                    timeField.setForeground(TEXT_MUTED);
-                }
-            }
-        });
+        }
+        styleComboBox(timeCombo);
 
         // --- Technician combo ---
         JComboBox<String> techCombo = new JComboBox<>();
@@ -1484,11 +1484,11 @@ public class CounterStaffDashboard extends JFrame {
             techCombo.removeAllItems();
             availableTechIDs.clear();
             String d = dateField.getText().trim();
-            String t = timeField.getText().trim();
+            String t = (String) timeCombo.getSelectedItem();
             String s = (String) serviceCombo.getSelectedItem();
 
             boolean validInput = !d.isEmpty() && !t.isEmpty()
-                    && !d.equals("YYYY-MM-DD") && !t.equals("HH:MM")
+                    && !d.equals("YYYY-MM-DD")
                     && d.matches("\\d{4}-\\d{2}-\\d{2}")
                     && t.matches("\\d{2}:\\d{2}");
 
@@ -1508,7 +1508,7 @@ public class CounterStaffDashboard extends JFrame {
             @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshTechs.run(); }
         };
         dateField.getDocument().addDocumentListener(docListener);
-        timeField.getDocument().addDocumentListener(docListener);
+        timeCombo.addActionListener(e -> refreshTechs.run());
         serviceCombo.addActionListener(e -> refreshTechs.run());
 
         // --- Build rows ---
@@ -1518,7 +1518,7 @@ public class CounterStaffDashboard extends JFrame {
         content.add(Box.createVerticalStrut(8));
         content.add(makeDialogFieldRow("Date", dateField));
         content.add(Box.createVerticalStrut(8));
-        content.add(makeDialogFieldRow("Time", timeField));
+        content.add(makeDialogComboRow("Time", timeCombo));
 
         JButton suggestSlotBtn = makeSecondaryButton("⚡ Suggest Next Available Slot");
         suggestSlotBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -1538,8 +1538,7 @@ public class CounterStaffDashboard extends JFrame {
 
             dateField.setText(checkDate.toString());
             dateField.setForeground(TEXT_PRIMARY);
-            timeField.setText("09:00");
-            timeField.setForeground(TEXT_PRIMARY);
+            timeCombo.setSelectedItem("09:00");
             refreshTechs.run();
 
             JOptionPane.showMessageDialog(dialog,
@@ -1581,7 +1580,7 @@ public class CounterStaffDashboard extends JFrame {
             if (custIdx < 0) { errLbl.setText("❌ Please select a customer."); return; }
 
             String date = dateField.getText().trim();
-            String time = timeField.getText().trim();
+            String time = (String) timeCombo.getSelectedItem();
 
             if (date.isEmpty() || date.equals("YYYY-MM-DD")) {
                 errLbl.setText("❌ Please enter a date (YYYY-MM-DD)."); return;
@@ -1589,11 +1588,14 @@ public class CounterStaffDashboard extends JFrame {
             if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
                 errLbl.setText("❌ Date must be in YYYY-MM-DD format."); return;
             }
-            if (time.isEmpty() || time.equals("HH:MM")) {
+            if (time == null || time.isEmpty()) {
                 errLbl.setText("❌ Please enter a time (HH:MM)."); return;
             }
             if (!time.matches("\\d{2}:\\d{2}")) {
                 errLbl.setText("❌ Time must be in HH:MM format."); return;
+            }
+            if (timeToMinutes(time) < 0) {
+                errLbl.setText("❌ Time must be a valid 24-hour time."); return;
             }
 
             int techIdx = techCombo.getSelectedIndex();
@@ -1603,11 +1605,16 @@ public class CounterStaffDashboard extends JFrame {
 
             String serviceType = (String) serviceCombo.getSelectedItem();
             String customerID = customerData.get(custIdx)[0];
-            String technicianID = availableTechIDs.get(techIdx);
+            String technicianUserID = availableTechIDs.get(techIdx);
+            String technicianID = FileHandler.getTechnicianIDByUserID(technicianUserID);
+            if (technicianID == null) {
+                errLbl.setText("❌ Could not resolve technician ID.");
+                return;
+            }
 
             String apptID = FileHandler.generateNextAppointmentID();
             Appointment newAppt = new Appointment(apptID, customerID, technicianID,
-                    date, time, serviceType, "Ongoing", currentStaff.getUserID());
+                    date, time, serviceType, "Ongoing", currentStaff.getFullName());
 
             List<Appointment> appointments = FileHandler.loadAllAppointments();
             appointments.add(newAppt);
@@ -1629,16 +1636,51 @@ public class CounterStaffDashboard extends JFrame {
     /**
      * Checks whether a technician has no overlapping appointment on the given date/time.
      */
-    private boolean isTechnicianAvailable(String technicianID, String date, String time, String serviceType) {
+    private boolean isBookedByCurrentStaff(Appointment appointment) {
+        String stored = appointment.getCounterStaffID();
+        return currentStaff.getUserID().equals(stored)
+                || currentStaff.getFullName().equals(stored);
+    }
+
+    private String resolveTechnicianDisplayName(String storedTechnicianRef) {
+        if (storedTechnicianRef == null || storedTechnicianRef.isEmpty()) {
+            return "Unassigned";
+        }
+        if (storedTechnicianRef.startsWith("T")) {
+            String name = FileHandler.getTechnicianNameByID(storedTechnicianRef);
+            if (name != null) {
+                return name;
+            }
+        }
+        for (User u : FileHandler.loadAllUsers()) {
+            if ("Technician".equals(u.getRole()) && u.getUserID().equals(storedTechnicianRef)) {
+                return u.getFullName();
+            }
+        }
+        return "Unassigned";
+    }
+
+    private boolean isAppointmentForTechnicianUser(Appointment appointment, String technicianUserID) {
+        String stored = appointment.getTechnicianID();
+        if (technicianUserID.equals(stored)) {
+            return true;
+        }
+        String technicianID = FileHandler.getTechnicianIDByUserID(technicianUserID);
+        return technicianID != null && technicianID.equals(stored);
+    }
+
+    private boolean isTechnicianAvailable(String technicianUserID, String date, String time, String serviceType) {
         int newDuration = FileHandler.getServiceDuration(serviceType);
         int newStart = timeToMinutes(time);
+        if (newStart < 0) return false;
         int newEnd = newStart + (newDuration * 60);
 
         for (Appointment a : FileHandler.loadAllAppointments()) {
-            if (!a.getTechnicianID().equals(technicianID)) continue;
+            if (!isAppointmentForTechnicianUser(a, technicianUserID)) continue;
             if (!a.getDate().equals(date)) continue;
 
             int existStart = timeToMinutes(a.getTime());
+            if (existStart < 0) continue;
             int existEnd = existStart + (FileHandler.getServiceDuration(a.getServiceType()) * 60);
 
             // Overlap: startA < endB && startB < endA
@@ -1655,9 +1697,15 @@ public class CounterStaffDashboard extends JFrame {
     private int timeToMinutes(String time) {
         try {
             String[] parts = time.split(":");
-            return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+            if (parts.length != 2) return -1;
+
+            int hour = Integer.parseInt(parts[0]);
+            int minute = Integer.parseInt(parts[1]);
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return -1;
+
+            return hour * 60 + minute;
         } catch (Exception e) {
-            return 0;
+            return -1;
         }
     }
 
@@ -2001,6 +2049,12 @@ public class CounterStaffDashboard extends JFrame {
         return btn;
     }
 
+    private void refreshDashboardPanel() {
+        contentPanel.remove(dashboardPanel);
+        dashboardPanel = buildDashboardPanel();
+        contentPanel.add(dashboardPanel, "DASHBOARD");
+    }
+
     private void navigateToPanel(String cardName) {
         if (profileEditMode) {
             int result = JOptionPane.showConfirmDialog(this,
@@ -2012,22 +2066,30 @@ public class CounterStaffDashboard extends JFrame {
                 return;
             exitProfileEditMode();
         }
+        if ("DASHBOARD".equals(cardName)) {
+            refreshDashboardPanel();
+        }
         contentLayout.show(contentPanel, cardName);
+        activeCardName = cardName;
+        updateNavButtonStyles();
     }
 
     private JButton makeNavButton(String label, String cardName) {
         JButton btn = new JButton(label);
-        btn.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 16));
         btn.setForeground(TEXT_MUTED);
         btn.setBackground(new Color(0, 0, 0, 0));
         btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setBorder(new EmptyBorder(12, 20, 12, 20));
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.putClientProperty("cardName", cardName);
+        navButtons.add(btn);
+        updateNavButtonStyle(btn);
         btn.addActionListener(e -> navigateToPanel(cardName));
         btn.addMouseListener(new MouseAdapter() {
             @Override
@@ -2037,10 +2099,26 @@ public class CounterStaffDashboard extends JFrame {
 
             @Override
             public void mouseExited(MouseEvent e) {
-                btn.setForeground(TEXT_MUTED);
+                updateNavButtonStyle(btn);
             }
         });
         return btn;
+    }
+
+    private void updateNavButtonStyles() {
+        for (JButton button : navButtons) {
+            updateNavButtonStyle(button);
+        }
+    }
+
+    private void updateNavButtonStyle(JButton button) {
+        boolean active = activeCardName.equals(button.getClientProperty("cardName"));
+        button.setForeground(active ? TEXT_PRIMARY : TEXT_MUTED);
+        button.setBorder(active
+                ? BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT),
+                        new EmptyBorder(12, 17, 12, 20))
+                : new EmptyBorder(12, 20, 12, 20));
     }
 
     private JTable makeStyledTable(DefaultTableModel model) {

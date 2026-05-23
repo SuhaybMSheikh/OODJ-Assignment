@@ -5,6 +5,7 @@ import java.awt.event.*;
 import java.awt.geom.Arc2D;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.swing.*;
@@ -36,7 +37,7 @@ public class TechnicianDashboard extends JFrame {
 
     // COLOURS — same structure as Manager; amber accent is the Technician colour
     private static final Color BG_DARK      = new Color(15,  17,  26);
-    private static final Color BG_CARD      = new Color(24,  27,  42);
+    private static final Color BG_CARD      = new Color(0, 0, 0);
     private static final Color BG_CARD2     = new Color(30,  34,  52);
     private static final Color ACCENT       = new Color(245, 158, 11);
     private static final Color TEXT_PRIMARY = new Color(240, 241, 255);
@@ -65,6 +66,8 @@ public class TechnicianDashboard extends JFrame {
     private JPanel     contentPanel;
     private JPanel     dashboardPanel;
     private JLabel     topBarUserLabel;
+    private String activeCardName = "DASHBOARD";
+    private List<JButton> navButtons = new ArrayList<>();
 
     public TechnicianDashboard(Technician tech) {
         this.currentTech = tech;
@@ -118,6 +121,8 @@ public class TechnicianDashboard extends JFrame {
                     exitProfileEditMode();
                 }
                 contentLayout.show(contentPanel, "PROFILE");
+                activeCardName = "PROFILE";
+                updateNavButtonStyles();
             }
             @Override public void mouseEntered(MouseEvent e) {
                 topBarUserLabel.setForeground(TEXT_PRIMARY);
@@ -155,8 +160,21 @@ public class TechnicianDashboard extends JFrame {
         sidebar.setBackground(BG_CARD);
         sidebar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
-            new EmptyBorder(24, 0, 24, 0)));
+            new EmptyBorder(6, 0, 24, 0)));
         sidebar.setPreferredSize(new Dimension(220, 0));
+
+        ImageIcon logoIcon = new ImageIcon("src/data/apu_logo_topPanel.png");
+        Image scaledLogo = logoIcon.getImage().getScaledInstance(192, 128, Image.SCALE_SMOOTH);
+        JLabel logoLabel = new JLabel(new ImageIcon(scaledLogo));
+        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        logoPanel.setOpaque(false);
+        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 128));
+        logoPanel.add(logoLabel);
+        sidebar.add(logoPanel);
+        sidebar.add(Box.createVerticalStrut(14));
 
         JLabel section = new JLabel("  TECHNICIAN MENU");
         section.setFont(new Font(F, Font.BOLD, 10));
@@ -213,9 +231,14 @@ public class TechnicianDashboard extends JFrame {
         headerRow.add(headingBlock, BorderLayout.WEST);
         headerRow.add(refreshBtn,   BorderLayout.EAST);
 
+        String myTechnicianID = FileHandler.getTechnicianIDByUserID(currentTech.getUserID());
         List<Appointment> myAppointments = FileHandler.loadAllAppointments()
             .stream()
-            .filter(a -> a.getTechnicianID().equals(currentTech.getUserID()))
+            .filter(a -> {
+                String stored = a.getTechnicianID();
+                return stored.equals(currentTech.getUserID())
+                        || (myTechnicianID != null && stored.equals(myTechnicianID));
+            })
             .collect(java.util.stream.Collectors.toList());
 
         int total     = myAppointments.size();
@@ -513,6 +536,8 @@ public class TechnicianDashboard extends JFrame {
         contentLayout.show(contentPanel, "DASHBOARD");
         contentPanel.revalidate();
         contentPanel.repaint();
+        activeCardName = "DASHBOARD";
+        updateNavButtonStyles();
     }
 
     //  PANEL 1 — MY PROFILE  (plain style, same as Manager / CounterStaff)
@@ -826,9 +851,14 @@ public class TechnicianDashboard extends JFrame {
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
+        String myTechnicianID = FileHandler.getTechnicianIDByUserID(currentTech.getUserID());
         List<Appointment> myAppointments = FileHandler.loadAllAppointments()
             .stream()
-            .filter(a -> a.getTechnicianID().equals(currentTech.getUserID()))
+            .filter(a -> {
+                String stored = a.getTechnicianID();
+                return stored.equals(currentTech.getUserID())
+                        || (myTechnicianID != null && stored.equals(myTechnicianID));
+            })
             .collect(java.util.stream.Collectors.toList());
         myAppointments.forEach(a -> model.addRow(new Object[]{
             a.getAppointmentID(), a.getDate(), a.getTime(),
@@ -1101,32 +1131,22 @@ public class TechnicianDashboard extends JFrame {
 
     // NAV BUTTON — Manager-style paintComponent highlight (glitch-free on Windows)
     private JButton makeNavButton(String label, String cardName) {
-        JButton btn = new JButton(label) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                                    RenderingHints.VALUE_ANTIALIAS_ON);
-                if (getModel().isArmed() || getModel().isSelected()) {
-                    g2.setColor(new Color(ACCENT.getRed(), ACCENT.getGreen(),
-                                          ACCENT.getBlue(), 40));
-                    g2.fillRect(0, 0, getWidth(), getHeight());
-                }
-                super.paintComponent(g);
-            }
-        };
-        btn.setFont(new Font(F, Font.PLAIN, 14));
+        JButton btn = new JButton(label);
+        btn.setFont(new Font(F, Font.PLAIN, 16));
         btn.setForeground(TEXT_MUTED);
         btn.setBackground(new Color(0, 0, 0, 0));
         btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setBorder(new EmptyBorder(12, 20, 12, 20));
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.putClientProperty("cardName", cardName);
+        navButtons.add(btn);
+        updateNavButtonStyle(btn);
         btn.addActionListener(e -> {
-            btn.setForeground(TEXT_PRIMARY);
             if (profileEditMode && !"PROFILE".equals(cardName)) {
                 int result = JOptionPane.showConfirmDialog(this,
                         "You have unsaved changes. Discard them?",
@@ -1137,13 +1157,33 @@ public class TechnicianDashboard extends JFrame {
                 exitProfileEditMode();
             }
             if ("DASHBOARD".equals(cardName)) refreshDashboard();
-            else contentLayout.show(contentPanel, cardName);
+            else {
+                contentLayout.show(contentPanel, cardName);
+                activeCardName = cardName;
+                updateNavButtonStyles();
+            }
         });
         btn.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
-            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_MUTED);   }
+            @Override public void mouseExited(MouseEvent e)  { updateNavButtonStyle(btn); }
         });
         return btn;
+    }
+
+    private void updateNavButtonStyles() {
+        for (JButton button : navButtons) {
+            updateNavButtonStyle(button);
+        }
+    }
+
+    private void updateNavButtonStyle(JButton button) {
+        boolean active = activeCardName.equals(button.getClientProperty("cardName"));
+        button.setForeground(active ? TEXT_PRIMARY : TEXT_MUTED);
+        button.setBorder(active
+                ? BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT),
+                        new EmptyBorder(12, 17, 12, 20))
+                : new EmptyBorder(12, 20, 12, 20));
     }
 
     private JTable makeStyledTable(DefaultTableModel model) {

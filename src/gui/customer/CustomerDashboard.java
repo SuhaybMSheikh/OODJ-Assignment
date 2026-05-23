@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +41,7 @@ public class CustomerDashboard extends JFrame {
 
     // COLOURS
     private static final Color BG_DARK      = new Color(15,  17,  26);
-    private static final Color BG_CARD      = new Color(24,  27,  42);
+    private static final Color BG_CARD      = new Color(0, 0, 0);
     private static final Color BG_CARD2     = new Color(30,  34,  52);
     private static final Color ACCENT       = new Color(236, 72, 153);
     private static final Color STAR_YELLOW  = new Color(255, 204, 0);
@@ -56,6 +57,8 @@ public class CustomerDashboard extends JFrame {
     private CardLayout contentLayout;
     private JPanel     contentPanel;
     private JPanel     historyPanel;
+    private String activeCardName = "DASHBOARD";
+    private List<JButton> navButtons = new ArrayList<>();
 
     // PROFILE PANEL STATE
     private boolean profileEditMode = false;
@@ -164,9 +167,22 @@ public class CustomerDashboard extends JFrame {
         sidebar.setBackground(BG_CARD);
         sidebar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
-            new EmptyBorder(24, 0, 24, 0)
+            new EmptyBorder(6, 0, 24, 0)
         ));
         sidebar.setPreferredSize(new Dimension(220, 0));
+
+        ImageIcon logoIcon = new ImageIcon("src/data/apu_logo_topPanel.png");
+        Image scaledLogo = logoIcon.getImage().getScaledInstance(192, 128, Image.SCALE_SMOOTH);
+        JLabel logoLabel = new JLabel(new ImageIcon(scaledLogo));
+        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        logoPanel.setOpaque(false);
+        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 128));
+        logoPanel.add(logoLabel);
+        sidebar.add(logoPanel);
+        sidebar.add(Box.createVerticalStrut(14));
 
         JLabel section = new JLabel("  CUSTOMER MENU");
         section.setFont(new Font("SansSerif", Font.BOLD, 10));
@@ -1389,17 +1405,20 @@ public class CustomerDashboard extends JFrame {
 
     private JButton makeNavButton(String label, String cardName) {
         JButton btn = new JButton(label);
-        btn.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 16));
         btn.setForeground(TEXT_MUTED);
         btn.setBackground(new Color(0, 0, 0, 0));
         btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setBorder(new EmptyBorder(12, 20, 12, 20));
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.putClientProperty("cardName", cardName);
+        navButtons.add(btn);
+        updateNavButtonStyle(btn);
         btn.addActionListener(e -> {
             if (profileEditMode) {
                 int result = JOptionPane.showConfirmDialog(this,
@@ -1416,12 +1435,30 @@ public class CustomerDashboard extends JFrame {
                 refreshHistoryPanel();
             }
             contentLayout.show(contentPanel, cardName);
+            activeCardName = cardName;
+            updateNavButtonStyles();
         });
         btn.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
-            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_MUTED);   }
+            @Override public void mouseExited(MouseEvent e)  { updateNavButtonStyle(btn); }
         });
         return btn;
+    }
+
+    private void updateNavButtonStyles() {
+        for (JButton button : navButtons) {
+            updateNavButtonStyle(button);
+        }
+    }
+
+    private void updateNavButtonStyle(JButton button) {
+        boolean active = activeCardName.equals(button.getClientProperty("cardName"));
+        button.setForeground(active ? TEXT_PRIMARY : TEXT_MUTED);
+        button.setBorder(active
+                ? BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT),
+                        new EmptyBorder(12, 17, 12, 20))
+                : new EmptyBorder(12, 20, 12, 20));
     }
 
     private JButton makeSecondaryButton(String label) {

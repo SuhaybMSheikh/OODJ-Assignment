@@ -4,19 +4,19 @@ package model;
  * MODEL CLASS — Appointment
  * --------------------------
  * Represents one row from appointments.txt
- * Format: A001|C001|U003|2025-05-10|09:00|Normal|Pending|U002
+ * Format: A001|C001|T001|2025-05-10|09:00|Normal|Pending|Sarah Lim
  *         [0]  [1]  [2]  [3]        [4]   [5]    [6]     [7]
  */
 public class Appointment {
 
     private String appointmentID;
     private String customerID;      // links to customers.txt
-    private String technicianID;    // links to users.txt (role = Technician)
+    private String technicianID;    // links to technicians.txt (e.g. T001)
     private String date;            // format: YYYY-MM-DD
     private String time;            // format: HH:MM
     private String serviceType;     // "Normal" or "Major"
     private String status;          // "Pending" or "Completed"
-    private String counterStaffID;  // the staff who booked it
+    private String counterStaffID;  // full name of the counter staff who booked it
 
     public Appointment(String appointmentID, String customerID, String technicianID,
                        String date, String time, String serviceType,

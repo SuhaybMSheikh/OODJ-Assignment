@@ -42,7 +42,7 @@ public class ManagerDashboard extends JFrame {
 
     // COLOURS
     protected static final Color BG_DARK      = new Color(15,  17,  26);
-    protected static final Color BG_CARD      = new Color(24,  27,  42);
+    protected static final Color BG_CARD      = new Color(0, 0, 0);
     protected static final Color BG_CARD2     = new Color(30,  34,  52);
     protected static final Color ACCENT       = new Color(99,  102, 241);
     protected static final Color TEXT_PRIMARY = new Color(240, 241, 255);
@@ -57,6 +57,8 @@ public class ManagerDashboard extends JFrame {
     // LAYOUT
     private CardLayout contentLayout;
     private JPanel     contentPanel;
+    private String activeCardName = "HOME";
+    private List<JButton> navButtons = new ArrayList<>();
 
     // PANELS (one per sidebar section)
     private JPanel homePanel;
@@ -167,9 +169,22 @@ public class ManagerDashboard extends JFrame {
         sidebar.setBackground(BG_CARD);
         sidebar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR),
-            new EmptyBorder(24, 0, 24, 0)
+            new EmptyBorder(6, 0, 24, 0)
         ));
         sidebar.setPreferredSize(new Dimension(220, 0));
+
+        ImageIcon logoIcon = new ImageIcon("src/data/apu_logo_topPanel.png");
+        Image scaledLogo = logoIcon.getImage().getScaledInstance(192, 128, Image.SCALE_SMOOTH);
+        JLabel logoLabel = new JLabel(new ImageIcon(scaledLogo));
+        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        logoPanel.setOpaque(false);
+        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 128));
+        logoPanel.add(logoLabel);
+        sidebar.add(logoPanel);
+        sidebar.add(Box.createVerticalStrut(14));
 
         JLabel section = new JLabel("  MANAGER MENU");
         section.setFont(new Font("SansSerif", Font.BOLD, 10));
@@ -441,6 +456,8 @@ public class ManagerDashboard extends JFrame {
         if ("HOME".equals(cardName)) {
             refreshHomeStats();
         }
+        activeCardName = cardName;
+        updateNavButtonStyles();
     }
 
 
@@ -2892,38 +2909,43 @@ public class ManagerDashboard extends JFrame {
     //  SHARED COMPONENT BUILDERS
     /** Creates a styled sidebar navigation button */
     private JButton makeNavButton(String label, String cardName) {
-        JButton btn = new JButton(label) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                                    RenderingHints.VALUE_ANTIALIAS_ON);
-                if (getModel().isArmed() || getModel().isSelected()) {
-                    g2.setColor(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 40));
-                    g2.fillRect(0, 0, getWidth(), getHeight());
-                }
-                super.paintComponent(g);
-            }
-        };
-        btn.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        JButton btn = new JButton(label);
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 16));
         btn.setForeground(TEXT_MUTED);
         btn.setBackground(new Color(0, 0, 0, 0));
         btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setBorder(new EmptyBorder(12, 20, 12, 20));
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> {
-            btn.setForeground(TEXT_PRIMARY);
-            navigateToCard(cardName);
-        });
+        btn.putClientProperty("cardName", cardName);
+        navButtons.add(btn);
+        updateNavButtonStyle(btn);
+        btn.addActionListener(e -> navigateToCard(cardName));
         btn.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
-            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_MUTED);   }
+            @Override public void mouseExited(MouseEvent e)  { updateNavButtonStyle(btn); }
         });
         return btn;
+    }
+
+    private void updateNavButtonStyles() {
+        for (JButton button : navButtons) {
+            updateNavButtonStyle(button);
+        }
+    }
+
+    private void updateNavButtonStyle(JButton button) {
+        boolean active = activeCardName.equals(button.getClientProperty("cardName"));
+        button.setForeground(active ? TEXT_PRIMARY : TEXT_MUTED);
+        button.setBorder(active
+                ? BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT),
+                        new EmptyBorder(12, 17, 12, 20))
+                : new EmptyBorder(12, 20, 12, 20));
     }
 
     protected JButton makePrimaryButton(String label) {

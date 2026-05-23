@@ -21,14 +21,18 @@ import util.Session;
 /**
  * GUI CLASS — TechnicianDashboard
  * MEMBER 4 features:
- *   [1] Edit own profile (first/last name, username, email, phone, password)
+ *   [1] Edit own profile (first/last name, email, phone, password)
+ *       - Username LOCKED (group decision: usernames cannot change once created)
+ *       - Validations: alphabets-only names, exactly 10-digit phone, valid email
  *   [2] View appointments assigned to THIS technician
- *   [3] Click an appointment to see full details + customer comments
- *   [4] Mark appointment Completed (and revert back to Pending)
- *   [5] Write feedback for a completed appointment
+ *   [3] Click an appointment to see full details + customer comment
+ *   [4] Mark appointment Completed (and revert back to Ongoing)
+ *   [5] Write feedback + View/Edit existing feedback for an appointment
+ *   [6] feedbacks.txt saves the technician ID (T001, T002...) not userID
  * EXTRA:
- *   [6] Dashboard home screen with work statistics
- *   [7] Live search / filter on appointments
+ *   [7] Dashboard home screen with work statistics
+ *   [8] Live search / filter on appointments
+ *   [9] Customer Comments tab — dedicated view of all customer comments
  *
  * Styling matches ManagerDashboard / CounterStaffDashboard for team consistency
  * (plain nav highlight via paintComponent — no Windows rendering glitch).
@@ -55,7 +59,6 @@ public class TechnicianDashboard extends JFrame {
 
     private JTextField firstNameField;
     private JTextField lastNameField;
-    private JTextField usernameField;
     private JTextField emailField;
     private JTextField phoneField;
     private JTextField passwordField;
@@ -65,6 +68,8 @@ public class TechnicianDashboard extends JFrame {
     private CardLayout contentLayout;
     private JPanel     contentPanel;
     private JPanel     dashboardPanel;
+    private JPanel     commentsPanel;
+    private JPanel     historyPanel;
     private JLabel     topBarUserLabel;
     private String activeCardName = "DASHBOARD";
     private List<JButton> navButtons = new ArrayList<>();
@@ -110,7 +115,6 @@ public class TechnicianDashboard extends JFrame {
         topBarUserLabel.setToolTipText("Open My Profile");
         topBarUserLabel.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
-                // Open the My Profile panel (same as clicking the sidebar item)
                 if (profileEditMode) {
                     int result = JOptionPane.showConfirmDialog(TechnicianDashboard.this,
                             "You have unsaved changes. Discard them?",
@@ -183,9 +187,11 @@ public class TechnicianDashboard extends JFrame {
         sidebar.add(section);
         sidebar.add(Box.createVerticalStrut(12));
 
-        sidebar.add(makeNavButton("\uD83D\uDCCA  Dashboard",       "DASHBOARD"));
-        sidebar.add(makeNavButton("\uD83D\uDC64  My Profile",      "PROFILE"));
-        sidebar.add(makeNavButton("\uD83D\uDCC5  My Appointments", "APPOINTMENTS"));
+        sidebar.add(makeNavButton("\uD83D\uDCCA  Dashboard",          "DASHBOARD"));
+        sidebar.add(makeNavButton("\uD83D\uDC64  My Profile",         "PROFILE"));
+        sidebar.add(makeNavButton("\uD83D\uDCC5  My Appointments",    "APPOINTMENTS"));
+        sidebar.add(makeNavButton("\uD83D\uDCC8  Service History",    "HISTORY"));
+        sidebar.add(makeNavButton("\uD83D\uDCAC  Customer Comments",  "COMMENTS"));
 
         sidebar.add(Box.createVerticalGlue());
         return sidebar;
@@ -197,9 +203,13 @@ public class TechnicianDashboard extends JFrame {
         contentPanel  = new JPanel(contentLayout);
         contentPanel.setBackground(BG_DARK);
         dashboardPanel = buildDashboardPanel();
+        commentsPanel  = buildCommentsPanel();
+        historyPanel   = buildHistoryPanel();
         contentPanel.add(dashboardPanel,           "DASHBOARD");
         contentPanel.add(buildProfilePanel(),      "PROFILE");
         contentPanel.add(buildAppointmentsPanel(), "APPOINTMENTS");
+        contentPanel.add(historyPanel,             "HISTORY");
+        contentPanel.add(commentsPanel,            "COMMENTS");
         contentLayout.show(contentPanel, "DASHBOARD");
         return contentPanel;
     }
@@ -242,21 +252,27 @@ public class TechnicianDashboard extends JFrame {
             .collect(java.util.stream.Collectors.toList());
 
         int total     = myAppointments.size();
-        int pending   = (int) myAppointments.stream().filter(a -> "Pending".equals(a.getStatus())).count();
+        // Treat both "Pending" (legacy) and "Ongoing" (new) the same — both are ongoing work
+        int ongoing   = (int) myAppointments.stream()
+            .filter(a -> "Ongoing".equals(a.getStatus()) || "Pending".equals(a.getStatus()))
+            .count();
         int completed = (int) myAppointments.stream().filter(a -> "Completed".equals(a.getStatus())).count();
         String todayStr = LocalDate.now().toString();
         int todayCount = (int) myAppointments.stream().filter(a -> todayStr.equals(a.getDate())).count();
         int normalCount = (int) myAppointments.stream().filter(a -> "Normal".equals(a.getServiceType())).count();
         int majorCount  = (int) myAppointments.stream().filter(a -> "Major".equals(a.getServiceType())).count();
         int completionRate = total == 0 ? 0 : (completed * 100) / total;
+
+        // Count feedbacks by THIS tech's T-ID (not userID) — matches group standard
         long feedbackCount = FileHandler.loadAllFeedbacks().stream()
-            .filter(f -> f.getTechnicianID().equals(currentTech.getUserID())).count();
+            .filter(f -> myTechnicianID != null && myTechnicianID.equals(f.getTechnicianID()))
+            .count();
 
         JPanel statsRow = new JPanel(new GridLayout(1, 4, 16, 0));
         statsRow.setOpaque(false);
         statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
         statsRow.add(makeStatCard("TOTAL APPOINTMENTS", String.valueOf(total),     "All bookings assigned", ACCENT));
-        statsRow.add(makeStatCard("PENDING",            String.valueOf(pending),   "Awaiting completion",   ACCENT));
+        statsRow.add(makeStatCard("ONGOING",            String.valueOf(ongoing),   "Awaiting completion",   ACCENT));
         statsRow.add(makeStatCard("COMPLETED",          String.valueOf(completed), "Jobs finished",         SUCCESS));
         statsRow.add(makeStatCard("TODAY",              String.valueOf(todayCount),"On " + todayStr,        INFO));
 
@@ -540,6 +556,303 @@ public class TechnicianDashboard extends JFrame {
         updateNavButtonStyles();
     }
 
+    //  PANEL — SERVICE HISTORY (EXTRA FEATURE: Bar Chart)
+    //  Shows completed appointments grouped by month as a styled bar chart.
+    private JPanel buildHistoryPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        // Header
+        JPanel head = new JPanel();
+        head.setLayout(new BoxLayout(head, BoxLayout.Y_AXIS));
+        head.setOpaque(false);
+        JLabel heading = new JLabel("Service History");
+        heading.setFont(new Font(F, Font.BOLD, 22));
+        heading.setForeground(TEXT_PRIMARY);
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel sub = new JLabel("Visual breakdown of your completed jobs by month");
+        sub.setFont(new Font(F, Font.PLAIN, 13));
+        sub.setForeground(TEXT_MUTED);
+        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sub.setBorder(new EmptyBorder(4, 0, 0, 0));
+        head.add(heading);
+        head.add(sub);
+
+        // Load this technician's completed jobs
+        String myTechnicianID = FileHandler.getTechnicianIDByUserID(currentTech.getUserID());
+        List<Appointment> myAppts = FileHandler.loadAllAppointments().stream()
+            .filter(a -> {
+                String stored = a.getTechnicianID();
+                return stored.equals(currentTech.getUserID())
+                        || (myTechnicianID != null && stored.equals(myTechnicianID));
+            })
+            .collect(java.util.stream.Collectors.toList());
+
+        // Group completed jobs by month (YYYY-MM)
+        java.util.Map<String, Integer> normalByMonth = new java.util.TreeMap<>();
+        java.util.Map<String, Integer> majorByMonth  = new java.util.TreeMap<>();
+        for (Appointment a : myAppts) {
+            if (!"Completed".equals(a.getStatus())) continue;
+            String date = a.getDate();
+            if (date == null || date.length() < 7) continue;
+            String month = date.substring(0, 7); // YYYY-MM
+            if ("Major".equals(a.getServiceType())) {
+                majorByMonth.merge(month, 1, Integer::sum);
+            } else {
+                normalByMonth.merge(month, 1, Integer::sum);
+            }
+        }
+
+        // Combine all months that appeared in either map
+        java.util.TreeSet<String> allMonths = new java.util.TreeSet<>();
+        allMonths.addAll(normalByMonth.keySet());
+        allMonths.addAll(majorByMonth.keySet());
+
+        // Totals for the summary strip
+        int totalCompleted = myAppts.stream()
+            .filter(a -> "Completed".equals(a.getStatus()))
+            .mapToInt(a -> 1).sum();
+        int totalNormal = normalByMonth.values().stream().mapToInt(Integer::intValue).sum();
+        int totalMajor  = majorByMonth.values().stream().mapToInt(Integer::intValue).sum();
+        int bestMonthCount = 0;
+        String bestMonth = "—";
+        for (String m : allMonths) {
+            int v = normalByMonth.getOrDefault(m, 0) + majorByMonth.getOrDefault(m, 0);
+            if (v > bestMonthCount) { bestMonthCount = v; bestMonth = m; }
+        }
+
+        // Summary cards
+        JPanel summaryRow = new JPanel(new GridLayout(1, 4, 14, 0));
+        summaryRow.setOpaque(false);
+        summaryRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+        summaryRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        summaryRow.add(makeStatCard("TOTAL JOBS",   String.valueOf(totalCompleted),
+                                    "All completed work",     SUCCESS));
+        summaryRow.add(makeStatCard("NORMAL",       String.valueOf(totalNormal),
+                                    "Regular services",       INFO));
+        summaryRow.add(makeStatCard("MAJOR",        String.valueOf(totalMajor),
+                                    "Major services",         ACCENT));
+        summaryRow.add(makeStatCard("BEST MONTH",   bestMonthCount > 0
+                                        ? String.valueOf(bestMonthCount) : "0",
+                                    bestMonth + " peak",      new Color(168, 85, 247)));
+
+        // Chart card
+        JPanel chartCard = new JPanel(new BorderLayout(0, 14));
+        chartCard.setBackground(BG_CARD);
+        chartCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(22, 24, 22, 24)));
+
+        JPanel chartHead = new JPanel(new BorderLayout());
+        chartHead.setOpaque(false);
+        JLabel chartTitle = new JLabel("Monthly Completed Jobs");
+        chartTitle.setFont(new Font(F, Font.BOLD, 15));
+        chartTitle.setForeground(TEXT_PRIMARY);
+
+        // Legend
+        JPanel legend = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 0));
+        legend.setOpaque(false);
+        legend.add(makeLegendDot("Normal", INFO));
+        legend.add(makeLegendDot("Major",  ACCENT));
+        chartHead.add(chartTitle, BorderLayout.WEST);
+        chartHead.add(legend,     BorderLayout.EAST);
+
+        // The actual chart
+        BarChartPanel chart = new BarChartPanel(normalByMonth, majorByMonth, allMonths);
+        chart.setPreferredSize(new Dimension(0, 320));
+
+        chartCard.add(chartHead, BorderLayout.NORTH);
+        chartCard.add(chart,     BorderLayout.CENTER);
+
+        // Empty state
+        if (totalCompleted == 0) {
+            JLabel empty = new JLabel("No completed jobs yet — your chart will appear here once you mark jobs as completed.",
+                                     SwingConstants.CENTER);
+            empty.setFont(new Font(F, Font.PLAIN, 13));
+            empty.setForeground(TEXT_MUTED);
+            empty.setBorder(new EmptyBorder(80, 0, 80, 0));
+            chartCard.remove(chart);
+            chartCard.add(empty, BorderLayout.CENTER);
+        }
+
+        // Body assembly
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+        summaryRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        chartCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(summaryRow);
+        body.add(Box.createVerticalStrut(18));
+        body.add(chartCard);
+        body.add(Box.createVerticalGlue());
+
+        JScrollPane scroll = new JScrollPane(body);
+        scroll.setBorder(null);
+        scroll.setBackground(BG_DARK);
+        scroll.getViewport().setBackground(BG_DARK);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        panel.add(head,   BorderLayout.NORTH);
+        panel.add(scroll, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel makeLegendDot(String label, Color color) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        row.setOpaque(false);
+        JPanel dot = new JPanel() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.fillOval(0, 1, 12, 12);
+                g2.dispose();
+            }
+        };
+        dot.setOpaque(false);
+        dot.setPreferredSize(new Dimension(12, 14));
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font(F, Font.PLAIN, 12));
+        lbl.setForeground(TEXT_PRIMARY);
+        row.add(dot);
+        row.add(lbl);
+        return row;
+    }
+
+    private void refreshHistoryPanel() {
+        contentPanel.remove(historyPanel);
+        historyPanel = buildHistoryPanel();
+        contentPanel.add(historyPanel, "HISTORY");
+    }
+
+    /**
+     * Custom-painted bar chart showing Normal + Major jobs per month.
+     * Uses anti-aliased Graphics2D and animates from 0 to full height on first paint.
+     */
+    private class BarChartPanel extends JPanel {
+        private final java.util.Map<String, Integer> normalMap;
+        private final java.util.Map<String, Integer> majorMap;
+        private final java.util.List<String> months;
+        private float progress = 0f;
+        private final javax.swing.Timer animTimer;
+
+        BarChartPanel(java.util.Map<String, Integer> normalMap,
+                      java.util.Map<String, Integer> majorMap,
+                      java.util.Set<String> allMonths) {
+            this.normalMap = normalMap;
+            this.majorMap  = majorMap;
+            this.months    = new ArrayList<>(allMonths);
+            setOpaque(false);
+            // Smooth grow-in animation
+            animTimer = new javax.swing.Timer(20, null);
+            animTimer.addActionListener(e -> {
+                progress = Math.min(1f, progress + 0.06f);
+                repaint();
+                if (progress >= 1f) animTimer.stop();
+            });
+            animTimer.start();
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                                RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            int W = getWidth(), H = getHeight();
+            int padL = 50, padR = 24, padT = 16, padB = 44;
+            int chartW = W - padL - padR;
+            int chartH = H - padT - padB;
+            if (chartW <= 0 || chartH <= 0 || months.isEmpty()) {
+                g2.dispose(); return;
+            }
+
+            // Find max value for scaling
+            int max = 1;
+            for (String m : months) {
+                int v = normalMap.getOrDefault(m, 0) + majorMap.getOrDefault(m, 0);
+                if (v > max) max = v;
+            }
+            // Round up to nice number
+            int ySteps = Math.min(max, 5);
+            if (ySteps < 1) ySteps = 1;
+
+            // Draw horizontal grid lines + Y-axis labels
+            g2.setFont(new Font(F, Font.PLAIN, 10));
+            g2.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
+                                        0, new float[]{3, 4}, 0));
+            for (int i = 0; i <= ySteps; i++) {
+                int y = padT + chartH - (chartH * i / ySteps);
+                int value = (max * i) / ySteps;
+                g2.setColor(BORDER_COLOR);
+                g2.drawLine(padL, y, padL + chartW, y);
+                g2.setColor(TEXT_MUTED);
+                g2.drawString(String.valueOf(value), padL - 26, y + 4);
+            }
+            g2.setStroke(new BasicStroke(1f));
+
+            // Bars: each month has Normal (blue) and Major (amber) stacked
+            int slotW = chartW / months.size();
+            int barW = Math.min(38, slotW - 16);
+            if (barW < 12) barW = Math.max(6, slotW - 4);
+
+            for (int i = 0; i < months.size(); i++) {
+                String m = months.get(i);
+                int normal = normalMap.getOrDefault(m, 0);
+                int major  = majorMap.getOrDefault(m, 0);
+                int total  = normal + major;
+
+                int slotX = padL + i * slotW;
+                int barX  = slotX + (slotW - barW) / 2;
+
+                int totalBarH = (int) (chartH * total / (double) max * progress);
+                int normalH   = (int) (chartH * normal / (double) max * progress);
+                int majorH    = totalBarH - normalH;
+
+                int yBase = padT + chartH;
+
+                // Draw Major (top) — amber
+                if (major > 0) {
+                    g2.setColor(ACCENT);
+                    g2.fillRoundRect(barX, yBase - totalBarH, barW, majorH, 6, 6);
+                }
+                // Draw Normal (bottom) — blue
+                if (normal > 0) {
+                    g2.setColor(INFO);
+                    int normY = yBase - normalH;
+                    g2.fillRoundRect(barX, normY, barW, normalH, 6, 6);
+                }
+
+                // Value label on top of bar (only when animation is mostly done)
+                if (progress > 0.85f && total > 0) {
+                    g2.setFont(new Font(F, Font.BOLD, 11));
+                    g2.setColor(TEXT_PRIMARY);
+                    String label = String.valueOf(total);
+                    int labelW = g2.getFontMetrics().stringWidth(label);
+                    g2.drawString(label, barX + (barW - labelW) / 2, yBase - totalBarH - 6);
+                }
+
+                // Month label below
+                g2.setFont(new Font(F, Font.PLAIN, 10));
+                g2.setColor(TEXT_MUTED);
+                String monthLabel = m.substring(5) + "/" + m.substring(2, 4); // MM/YY
+                int labelW = g2.getFontMetrics().stringWidth(monthLabel);
+                g2.drawString(monthLabel, barX + (barW - labelW) / 2, yBase + 18);
+            }
+
+            g2.dispose();
+        }
+    }
+
+    private void refreshCommentsPanel() {
+        contentPanel.remove(commentsPanel);
+        commentsPanel = buildCommentsPanel();
+        contentPanel.add(commentsPanel, "COMMENTS");
+    }
+
     //  PANEL 1 — MY PROFILE  (plain style, same as Manager / CounterStaff)
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
@@ -609,17 +922,8 @@ public class TechnicianDashboard extends JFrame {
             profileCard.add(fullNameRow);
             profileCard.add(Box.createVerticalStrut(12));
 
-            JPanel usernameRow = new JPanel(new BorderLayout(16, 0));
-            usernameRow.setOpaque(false);
-            usernameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-            JLabel usernameLbl = new JLabel("Username:");
-            usernameLbl.setFont(new Font(F, Font.PLAIN, 13));
-            usernameLbl.setForeground(TEXT_MUTED);
-            usernameLbl.setPreferredSize(new Dimension(100, 20));
-            usernameField = makeEditableTextField(currentTech.getUsername());
-            usernameRow.add(usernameLbl, BorderLayout.WEST);
-            usernameRow.add(usernameField, BorderLayout.CENTER);
-            profileCard.add(usernameRow);
+            // Username — LOCKED per group decision (Suhayb's chat: usernames cannot change)
+            profileCard.add(makeInfoRow("Username", currentTech.getUsername() + "  (cannot be changed)"));
             profileCard.add(Box.createVerticalStrut(12));
 
             JPanel emailRow = new JPanel(new BorderLayout(16, 0));
@@ -773,25 +1077,51 @@ public class TechnicianDashboard extends JFrame {
         return "*".repeat(password.length());
     }
 
+    /**
+     * Validates and saves edits to the technician's own profile.
+     * Validations match the group standards from the WhatsApp chat (Jimmy + Basil):
+     *   - All fields required
+     *   - Names: alphabets only
+     *   - Phone: numeric only, exactly 10 digits
+     *   - Email: must be in format a@b.c
+     *   - Username NOT editable (locked per Suhayb's chat decision)
+     */
     private void onProfileSave() {
         String firstName = firstNameField.getText().trim();
         String lastName  = lastNameField.getText().trim();
-        String username  = usernameField.getText().trim();
         String email     = emailField.getText().trim();
         String phone     = phoneField.getText().trim();
         String password  = passwordVisible ? passwordField.getText().trim() : currentTech.getPassword();
 
-        if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty()
-                || email.isEmpty() || phone.isEmpty()) {
+        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty()) {
             errorMsg.setText("\u274C All fields are required.");
             profileCard.revalidate(); profileCard.repaint();
             return;
         }
-        if (!phone.matches("\\d{10,11}")) {
-            errorMsg.setText("\u274C Phone must be 10-11 digits.");
+        // Names: alphabets only
+        if (!firstName.matches("[A-Za-z]+") || !lastName.matches("[A-Za-z]+")) {
+            errorMsg.setText("\u274C First and last name must contain only alphabets.");
             profileCard.revalidate(); profileCard.repaint();
             return;
         }
+        // Phone: exactly 10 numeric digits
+        if (!phone.matches("\\d{10}")) {
+            errorMsg.setText("\u274C Phone must be exactly 10 digits (numbers only).");
+            profileCard.revalidate(); profileCard.repaint();
+            return;
+        }
+        // Email: must contain @ and a valid domain
+        if (!email.matches("^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$")) {
+            errorMsg.setText("\u274C Email format is invalid (e.g. name@example.com).");
+            profileCard.revalidate(); profileCard.repaint();
+            return;
+        }
+        if (passwordVisible && password.isEmpty()) {
+            errorMsg.setText("\u274C Password cannot be empty.");
+            profileCard.revalidate(); profileCard.repaint();
+            return;
+        }
+
         List<User> users = FileHandler.loadAllUsers();
         User userToUpdate = null;
         for (User u : users) {
@@ -804,7 +1134,6 @@ public class TechnicianDashboard extends JFrame {
         }
         userToUpdate.setFirstName(firstName);
         userToUpdate.setLastName(lastName);
-        userToUpdate.setUsername(username);
         userToUpdate.setEmail(email);
         userToUpdate.setPhone(phone);
         if (passwordVisible) userToUpdate.setPassword(password);
@@ -812,7 +1141,6 @@ public class TechnicianDashboard extends JFrame {
 
         currentTech.setFirstName(firstName);
         currentTech.setLastName(lastName);
-        currentTech.setUsername(username);
         currentTech.setEmail(email);
         currentTech.setPhone(phone);
         if (passwordVisible) currentTech.setPassword(password);
@@ -921,8 +1249,9 @@ public class TechnicianDashboard extends JFrame {
         detailHeading.setFont(new Font(F, Font.BOLD, 16));
         detailHeading.setForeground(TEXT_PRIMARY);
         detailHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Details — ALL TEXT WHITE per group request (TEXT_PRIMARY = #F0F1FF)
         JLabel detailContent = new JLabel(
-            "<html><div style='color:#9497B4;'>Select an appointment from the<br>"
+            "<html><div style='color:#F0F1FF;'>Select an appointment from the<br>"
             + "list to view its details.</div></html>");
         detailContent.setFont(new Font(F, Font.PLAIN, 13));
         detailContent.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -932,7 +1261,7 @@ public class TechnicianDashboard extends JFrame {
         commentArea.setLineWrap(true);
         commentArea.setWrapStyleWord(true);
         commentArea.setFont(new Font(F, Font.PLAIN, 12));
-        commentArea.setForeground(TEXT_MUTED);
+        commentArea.setForeground(TEXT_PRIMARY);
         commentArea.setBackground(BG_CARD2);
         commentArea.setBorder(new EmptyBorder(10, 12, 10, 12));
         JScrollPane commentScroll = new JScrollPane(commentArea);
@@ -953,6 +1282,10 @@ public class TechnicianDashboard extends JFrame {
         JButton feedbackBtn = makeSecondaryButton("\uD83D\uDCDD  Write Feedback");
         feedbackBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
         feedbackBtn.setEnabled(false);
+        JButton viewFeedbackBtn = makeSecondaryButton("\uD83D\uDC41  View/Edit Feedback");
+        viewFeedbackBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        viewFeedbackBtn.setEnabled(false);
+        viewFeedbackBtn.setVisible(false);
 
         rightPane.add(detailHeading);
         rightPane.add(Box.createVerticalStrut(16));
@@ -965,6 +1298,8 @@ public class TechnicianDashboard extends JFrame {
         rightPane.add(completeBtn);
         rightPane.add(Box.createVerticalStrut(10));
         rightPane.add(feedbackBtn);
+        rightPane.add(Box.createVerticalStrut(10));
+        rightPane.add(viewFeedbackBtn);
         rightPane.add(Box.createVerticalGlue());
 
         Map<String, String> commentsMap = loadComments();
@@ -984,14 +1319,15 @@ public class TechnicianDashboard extends JFrame {
                     break;
                 }
             }
+            // Details — ALL TEXT WHITE (TEXT_PRIMARY = #F0F1FF) per group request
             detailContent.setText(
-                "<html><div style='line-height:1.8;'>"
-                + "<b style='color:#F0F1FF;'>Appointment ID:</b>  " + apptID + "<br>"
-                + "<b style='color:#F0F1FF;'>Customer:</b>  " + custName + "<br>"
-                + "<b style='color:#F0F1FF;'>Date:</b>  " + model.getValueAt(row, 1) + "<br>"
-                + "<b style='color:#F0F1FF;'>Time:</b>  " + model.getValueAt(row, 2) + "<br>"
-                + "<b style='color:#F0F1FF;'>Service:</b>  " + model.getValueAt(row, 3) + "<br>"
-                + "<b style='color:#F0F1FF;'>Status:</b>  " + status + "</div></html>");
+                "<html><div style='line-height:1.8; color:#F0F1FF;'>"
+                + "<b>Appointment ID:</b>  " + apptID + "<br>"
+                + "<b>Customer:</b>  " + custName + "<br>"
+                + "<b>Date:</b>  " + model.getValueAt(row, 1) + "<br>"
+                + "<b>Time:</b>  " + model.getValueAt(row, 2) + "<br>"
+                + "<b>Service:</b>  " + model.getValueAt(row, 3) + "<br>"
+                + "<b>Status:</b>  " + status + "</div></html>");
             String comment = commentsMap.get(apptID);
             if (comment != null && !comment.isEmpty()) {
                 commentArea.setText(comment);
@@ -1002,10 +1338,26 @@ public class TechnicianDashboard extends JFrame {
                 commentTitle.setVisible(false);
                 commentScroll.setVisible(false);
             }
-            if ("Pending".equals(status)) completeBtn.setText("\u2705  Mark as Completed");
-            else                          completeBtn.setText("\u21A9  Revert to Pending");
-            completeBtn.setEnabled(true);
-            feedbackBtn.setEnabled("Completed".equals(status));
+
+            // Treat both "Pending" (legacy data) and "Ongoing" (new) as "ongoing" work
+            boolean isOngoing = "Ongoing".equals(status) || "Pending".equals(status);
+            if (isOngoing) {
+                completeBtn.setText("\u2705  Mark as Completed");
+                completeBtn.setEnabled(true);
+                feedbackBtn.setVisible(true);
+                feedbackBtn.setEnabled(false);
+                viewFeedbackBtn.setVisible(false);
+                viewFeedbackBtn.setEnabled(false);
+            } else { // Completed
+                completeBtn.setText("\u21A9  Revert to Ongoing");
+                completeBtn.setEnabled(true);
+                // Check if feedback already exists for this appointment
+                boolean hasFeedback = feedbackExistsFor(apptID);
+                feedbackBtn.setVisible(!hasFeedback);
+                feedbackBtn.setEnabled(!hasFeedback);
+                viewFeedbackBtn.setVisible(hasFeedback);
+                viewFeedbackBtn.setEnabled(hasFeedback);
+            }
             rightPane.revalidate();
             rightPane.repaint();
         });
@@ -1016,8 +1368,10 @@ public class TechnicianDashboard extends JFrame {
             int row = table.convertRowIndexToModel(viewRow);
             String apptID = (String) model.getValueAt(row, 0);
             String currentStatus = (String) model.getValueAt(row, 4);
-            String newStatus  = "Pending".equals(currentStatus) ? "Completed" : "Pending";
-            String actionWord = "Pending".equals(currentStatus) ? "mark as Completed" : "revert to Pending";
+            // Both "Pending" (legacy) and "Ongoing" (new) mean the same thing
+            boolean isCurrentlyOngoing = "Ongoing".equals(currentStatus) || "Pending".equals(currentStatus);
+            String newStatus  = isCurrentlyOngoing ? "Completed" : "Ongoing";
+            String actionWord = isCurrentlyOngoing ? "mark as Completed" : "revert to Ongoing";
             int confirm = JOptionPane.showConfirmDialog(this,
                 "Are you sure you want to " + actionWord + " appointment " + apptID + "?",
                 "Confirm", JOptionPane.YES_NO_OPTION);
@@ -1034,13 +1388,21 @@ public class TechnicianDashboard extends JFrame {
             if (saved) {
                 FileHandler.saveAllAppointments(appointments);
                 model.setValueAt(newStatus, row, 4);
+                boolean hasFeedback = feedbackExistsFor(apptID);
                 if ("Completed".equals(newStatus)) {
-                    completeBtn.setText("\u21A9  Revert to Pending");
-                    feedbackBtn.setEnabled(true);
+                    completeBtn.setText("\u21A9  Revert to Ongoing");
+                    feedbackBtn.setVisible(!hasFeedback);
+                    feedbackBtn.setEnabled(!hasFeedback);
+                    viewFeedbackBtn.setVisible(hasFeedback);
+                    viewFeedbackBtn.setEnabled(hasFeedback);
                 } else {
                     completeBtn.setText("\u2705  Mark as Completed");
+                    feedbackBtn.setVisible(true);
                     feedbackBtn.setEnabled(false);
+                    viewFeedbackBtn.setVisible(false);
+                    viewFeedbackBtn.setEnabled(false);
                 }
+                rightPane.revalidate(); rightPane.repaint();
                 JOptionPane.showMessageDialog(this,
                     "Appointment " + apptID + " is now " + newStatus + ".",
                     "Status Updated", JOptionPane.INFORMATION_MESSAGE);
@@ -1056,7 +1418,22 @@ public class TechnicianDashboard extends JFrame {
             if (viewRow == -1) return;
             int row = table.convertRowIndexToModel(viewRow);
             String apptID = (String) model.getValueAt(row, 0);
-            openFeedbackDialog(apptID);
+            openFeedbackDialog(apptID, false);
+            // Refresh button states based on whether feedback now exists
+            boolean hasFeedback = feedbackExistsFor(apptID);
+            feedbackBtn.setVisible(!hasFeedback);
+            feedbackBtn.setEnabled(!hasFeedback);
+            viewFeedbackBtn.setVisible(hasFeedback);
+            viewFeedbackBtn.setEnabled(hasFeedback);
+            rightPane.revalidate(); rightPane.repaint();
+        });
+
+        viewFeedbackBtn.addActionListener(e -> {
+            int viewRow = table.getSelectedRow();
+            if (viewRow == -1) return;
+            int row = table.convertRowIndexToModel(viewRow);
+            String apptID = (String) model.getValueAt(row, 0);
+            openFeedbackDialog(apptID, true);
         });
 
         panel.add(leftPane,  BorderLayout.WEST);
@@ -1064,27 +1441,171 @@ public class TechnicianDashboard extends JFrame {
         return panel;
     }
 
-    private void openFeedbackDialog(String apptID) {
-        JTextArea textArea = new JTextArea(5, 30);
+    /** Returns true if there is a feedback row for the given appointment. */
+    private boolean feedbackExistsFor(String apptID) {
+        return FileHandler.loadAllFeedbacks().stream()
+            .anyMatch(f -> f.getAppointmentID().equals(apptID));
+    }
+
+    /**
+     * Opens a feedback dialog.
+     * If editMode==true, pre-fills the existing feedback text so the
+     * technician can update it.
+     * Saves to feedbacks.txt using the technician's T-ID (T001, T002...) — NOT userID.
+     */
+    private void openFeedbackDialog(String apptID, boolean editMode) {
+        // Look up existing feedback if editing
+        List<Feedback> feedbacks = FileHandler.loadAllFeedbacks();
+        Feedback existing = null;
+        for (Feedback f : feedbacks) {
+            if (f.getAppointmentID().equals(apptID)) { existing = f; break; }
+        }
+
+        JTextArea textArea = new JTextArea(6, 32);
         textArea.setFont(new Font(F, Font.PLAIN, 13));
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
+        if (editMode && existing != null) {
+            textArea.setText(existing.getFeedbackText());
+        }
         JScrollPane sp = new JScrollPane(textArea);
+
+        String dialogTitle = editMode ? "View / Edit Feedback" : "Write Feedback";
+        String prompt = (editMode ? "Edit feedback for appointment " : "Enter feedback for appointment ")
+                        + apptID + ":";
+
         int result = JOptionPane.showConfirmDialog(this,
-            new Object[]{"Enter feedback for appointment " + apptID + ":", sp},
-            "Write Feedback", JOptionPane.OK_CANCEL_OPTION);
+            new Object[]{prompt, sp}, dialogTitle,
+            JOptionPane.OK_CANCEL_OPTION);
+
         if (result == JOptionPane.OK_OPTION) {
             String text = textArea.getText().trim();
             if (text.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Feedback cannot be empty.");
                 return;
             }
-            Feedback newFeedback = new Feedback(apptID, currentTech.getUserID(), text);
-            List<Feedback> feedbacks = FileHandler.loadAllFeedbacks();
-            feedbacks.add(newFeedback);
+
+            // Look up THIS technician's T-ID (using current user's userID)
+            String techID = FileHandler.getTechnicianIDByUserID(currentTech.getUserID());
+            if (techID == null) {
+                JOptionPane.showMessageDialog(this,
+                    "Could not find your technician record. Please contact admin.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (existing != null) {
+                // Update existing feedback in place
+                existing.setFeedbackText(text);
+            } else {
+                // Add new feedback — using T-ID (not userID) per group requirement
+                feedbacks.add(new Feedback(apptID, techID, text));
+            }
             FileHandler.saveAllFeedbacks(feedbacks);
-            JOptionPane.showMessageDialog(this, "Feedback saved successfully.");
+            JOptionPane.showMessageDialog(this,
+                editMode ? "Feedback updated successfully." : "Feedback saved successfully.");
         }
+    }
+
+    //  PANEL 3 — CUSTOMER COMMENTS (Group-requested tab)
+    //  Shows all customer comments for appointments assigned to this technician.
+    private JPanel buildCommentsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        panel.setBackground(BG_DARK);
+        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
+
+        JPanel head = new JPanel();
+        head.setLayout(new BoxLayout(head, BoxLayout.Y_AXIS));
+        head.setOpaque(false);
+        JLabel heading = new JLabel("Customer Comments");
+        heading.setFont(new Font(F, Font.BOLD, 22));
+        heading.setForeground(TEXT_PRIMARY);
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel sub = new JLabel("All customer comments on appointments assigned to you");
+        sub.setFont(new Font(F, Font.PLAIN, 13));
+        sub.setForeground(TEXT_MUTED);
+        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sub.setBorder(new EmptyBorder(4, 0, 0, 0));
+        head.add(heading);
+        head.add(sub);
+
+        String myTechnicianID = FileHandler.getTechnicianIDByUserID(currentTech.getUserID());
+        List<Appointment> myAppts = FileHandler.loadAllAppointments().stream()
+            .filter(a -> {
+                String stored = a.getTechnicianID();
+                return stored.equals(currentTech.getUserID())
+                        || (myTechnicianID != null && stored.equals(myTechnicianID));
+            })
+            .collect(java.util.stream.Collectors.toList());
+        Map<String, String> comments      = loadComments();
+        Map<String, String> customerNames = loadCustomerNames();
+
+        JPanel listBody = new JPanel();
+        listBody.setLayout(new BoxLayout(listBody, BoxLayout.Y_AXIS));
+        listBody.setOpaque(false);
+
+        int shown = 0;
+        List<Appointment> sorted = myAppts.stream()
+            .sorted((a, b) -> safeCompareDate(b.getDate(), a.getDate()))
+            .collect(java.util.stream.Collectors.toList());
+        for (Appointment a : sorted) {
+            String c = comments.get(a.getAppointmentID());
+            if (c == null || c.isEmpty()) continue;
+            String cn = customerNames.getOrDefault(a.getCustomerID(), a.getCustomerID());
+            listBody.add(makeCommentCard(a, cn, c));
+            listBody.add(Box.createVerticalStrut(12));
+            shown++;
+        }
+
+        if (shown == 0) {
+            JLabel empty = new JLabel("No customer comments on your appointments yet.");
+            empty.setFont(new Font(F, Font.PLAIN, 13));
+            empty.setForeground(TEXT_MUTED);
+            empty.setBorder(new EmptyBorder(40, 0, 0, 0));
+            listBody.add(empty);
+        }
+
+        JScrollPane scroll = new JScrollPane(listBody);
+        scroll.setBorder(null);
+        scroll.setBackground(BG_DARK);
+        scroll.getViewport().setBackground(BG_DARK);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        panel.add(head,   BorderLayout.NORTH);
+        panel.add(scroll, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel makeCommentCard(Appointment a, String customerName, String comment) {
+        JPanel card = new JPanel(new BorderLayout(0, 8));
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(16, 18, 16, 18)));
+
+        JPanel top = new JPanel(new BorderLayout());
+        top.setOpaque(false);
+        JLabel header = new JLabel(a.getAppointmentID() + "   ·   " + customerName);
+        header.setFont(new Font(F, Font.BOLD, 13));
+        header.setForeground(TEXT_PRIMARY);
+        JLabel dateLbl = new JLabel(a.getDate() + "  ·  " + a.getServiceType());
+        dateLbl.setFont(new Font(F, Font.PLAIN, 11));
+        dateLbl.setForeground(TEXT_MUTED);
+        top.add(header,  BorderLayout.WEST);
+        top.add(dateLbl, BorderLayout.EAST);
+
+        JTextArea body = new JTextArea(comment);
+        body.setEditable(false);
+        body.setLineWrap(true);
+        body.setWrapStyleWord(true);
+        body.setFont(new Font(F, Font.PLAIN, 13));
+        body.setForeground(TEXT_PRIMARY);
+        body.setBackground(BG_CARD);
+        body.setBorder(new EmptyBorder(8, 0, 0, 0));
+
+        card.add(top,  BorderLayout.NORTH);
+        card.add(body, BorderLayout.CENTER);
+        return card;
     }
 
     //  SHARED HELPERS
@@ -1107,29 +1628,54 @@ public class TechnicianDashboard extends JFrame {
 
     private JButton makePrimaryButton(String label) {
         JButton btn = new JButton(label);
-        btn.setFont(new Font(F, Font.BOLD, 13));
-        btn.setForeground(new Color(15, 17, 26));
-        btn.setBackground(ACCENT);
+        btn.setFont(new Font(F, Font.BOLD, 14));
+        btn.setForeground(TEXT_PRIMARY);
+        btn.setBackground(new Color(0, 0, 0, 0));
+        btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
         btn.setBorder(new EmptyBorder(10, 18, 10, 18));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(ACCENT); }
+            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_PRIMARY); }
+        });
         return btn;
     }
 
     private JButton makeSecondaryButton(String label) {
-        JButton btn = new JButton(label);
+        JButton btn = new JButton(label) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isArmed()) {
+                    g2.setColor(BG_CARD2);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                }
+                g2.setColor(BORDER_COLOR);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
         btn.setFont(new Font(F, Font.PLAIN, 13));
-        btn.setForeground(TEXT_MUTED);
-        btn.setBackground(BG_CARD2);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            new EmptyBorder(8, 14, 8, 14)));
+        btn.setForeground(TEXT_PRIMARY);
+        btn.setBackground(new Color(0, 0, 0, 0));
+        btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setBorder(new EmptyBorder(8, 14, 8, 14));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(ACCENT); }
+            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_PRIMARY); }
+        });
         return btn;
     }
 
-    // NAV BUTTON — Manager-style paintComponent highlight (glitch-free on Windows)
+    // NAV BUTTON — Manager-style highlight (glitch-free on Windows)
     private JButton makeNavButton(String label, String cardName) {
         JButton btn = new JButton(label);
         btn.setFont(new Font(F, Font.PLAIN, 16));
@@ -1157,6 +1703,18 @@ public class TechnicianDashboard extends JFrame {
                 exitProfileEditMode();
             }
             if ("DASHBOARD".equals(cardName)) refreshDashboard();
+            else if ("COMMENTS".equals(cardName)) {
+                refreshCommentsPanel();
+                contentLayout.show(contentPanel, cardName);
+                activeCardName = cardName;
+                updateNavButtonStyles();
+            }
+            else if ("HISTORY".equals(cardName)) {
+                refreshHistoryPanel();
+                contentLayout.show(contentPanel, cardName);
+                activeCardName = cardName;
+                updateNavButtonStyles();
+            }
             else {
                 contentLayout.show(contentPanel, cardName);
                 activeCardName = cardName;
@@ -1191,18 +1749,50 @@ public class TechnicianDashboard extends JFrame {
         table.setBackground(BG_CARD);
         table.setForeground(TEXT_PRIMARY);
         table.setFont(new Font(F, Font.PLAIN, 13));
-        table.setRowHeight(40);
+        table.setRowHeight(42);
         table.setGridColor(BORDER_COLOR);
-        table.setSelectionBackground(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 60));
+        // Stronger selection (was alpha 60 = too dim)
+        table.setSelectionBackground(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 110));
         table.setSelectionForeground(TEXT_PRIMARY);
         table.setShowVerticalLines(false);
         table.setFillsViewportHeight(true);
+
+        // Custom renderer: status column gets bright bold color
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(JTable t, Object v,
+                    boolean sel, boolean foc, int row, int col) {
+                Component c = super.getTableCellRendererComponent(t, v, sel, foc, row, col);
+                setBorder(new EmptyBorder(0, 12, 0, 8));
+                if (col == 4) { // Status column
+                    setFont(new Font(F, Font.BOLD, 12));
+                    String s = String.valueOf(v);
+                    if ("Completed".equals(s)) {
+                        setForeground(sel ? TEXT_PRIMARY : new Color(74, 222, 128)); // bright green
+                    } else if ("Ongoing".equals(s) || "Pending".equals(s)) {
+                        setForeground(sel ? TEXT_PRIMARY : new Color(255, 184, 28)); // bright amber
+                    } else {
+                        setForeground(TEXT_PRIMARY);
+                    }
+                } else {
+                    setFont(new Font(F, Font.PLAIN, 13));
+                    setForeground(sel ? TEXT_PRIMARY : TEXT_PRIMARY);
+                }
+                if (!sel) setBackground(BG_CARD);
+                return c;
+            }
+        };
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(renderer);
+        }
+
         JTableHeader header = table.getTableHeader();
         header.setBackground(BG_CARD2);
-        header.setForeground(TEXT_MUTED);
+        header.setForeground(TEXT_PRIMARY);
         header.setFont(new Font(F, Font.BOLD, 12));
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
         header.setReorderingAllowed(false);
+        ((DefaultTableCellRenderer) header.getDefaultRenderer())
+            .setHorizontalAlignment(SwingConstants.LEFT);
         return table;
     }
 

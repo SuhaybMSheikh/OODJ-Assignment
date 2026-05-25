@@ -2915,7 +2915,7 @@ public class ManagerDashboard extends JFrame {
         btn.setBackground(new Color(0, 0, 0, 0));
         btn.setOpaque(false);
         btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
+        btn.setBorderPainted(true);
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
@@ -2926,7 +2926,14 @@ public class ManagerDashboard extends JFrame {
         updateNavButtonStyle(btn);
         btn.addActionListener(e -> navigateToCard(cardName));
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
+            @Override public void mouseEntered(MouseEvent e) {
+                btn.setForeground(TEXT_PRIMARY);
+                if (!activeCardName.equals(btn.getClientProperty("cardName"))) {
+                    btn.setOpaque(true);
+                    btn.setContentAreaFilled(true);
+                    btn.setBackground(BG_CARD2);
+                }
+            }
             @Override public void mouseExited(MouseEvent e)  { updateNavButtonStyle(btn); }
         });
         return btn;
@@ -2941,11 +2948,10 @@ public class ManagerDashboard extends JFrame {
     private void updateNavButtonStyle(JButton button) {
         boolean active = activeCardName.equals(button.getClientProperty("cardName"));
         button.setForeground(active ? TEXT_PRIMARY : TEXT_MUTED);
-        button.setBorder(active
-                ? BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT),
-                        new EmptyBorder(12, 17, 12, 20))
-                : new EmptyBorder(12, 20, 12, 20));
+        button.setOpaque(active);
+        button.setContentAreaFilled(active);
+        button.setBackground(active ? BG_CARD2 : new Color(0, 0, 0, 0));
+        button.setBorder(new EmptyBorder(12, 20, 12, 20));
     }
 
     protected JButton makePrimaryButton(String label) {

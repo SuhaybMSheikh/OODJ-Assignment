@@ -69,7 +69,6 @@ public class TechnicianDashboard extends JFrame {
     private JPanel     contentPanel;
     private JPanel     dashboardPanel;
     private JPanel     commentsPanel;
-    private JPanel     historyPanel;
     private JLabel     topBarUserLabel;
     private String activeCardName = "DASHBOARD";
     private List<JButton> navButtons = new ArrayList<>();
@@ -188,9 +187,7 @@ public class TechnicianDashboard extends JFrame {
         sidebar.add(Box.createVerticalStrut(12));
 
         sidebar.add(makeNavButton("\uD83D\uDCCA  Dashboard",          "DASHBOARD"));
-        sidebar.add(makeNavButton("\uD83D\uDC64  My Profile",         "PROFILE"));
         sidebar.add(makeNavButton("\uD83D\uDCC5  My Appointments",    "APPOINTMENTS"));
-        sidebar.add(makeNavButton("\uD83D\uDCC8  Service History",    "HISTORY"));
         sidebar.add(makeNavButton("\uD83D\uDCAC  Customer Comments",  "COMMENTS"));
 
         sidebar.add(Box.createVerticalGlue());
@@ -204,11 +201,9 @@ public class TechnicianDashboard extends JFrame {
         contentPanel.setBackground(BG_DARK);
         dashboardPanel = buildDashboardPanel();
         commentsPanel  = buildCommentsPanel();
-        historyPanel   = buildHistoryPanel();
         contentPanel.add(dashboardPanel,           "DASHBOARD");
         contentPanel.add(buildProfilePanel(),      "PROFILE");
         contentPanel.add(buildAppointmentsPanel(), "APPOINTMENTS");
-        contentPanel.add(historyPanel,             "HISTORY");
         contentPanel.add(commentsPanel,            "COMMENTS");
         contentLayout.show(contentPanel, "DASHBOARD");
         return contentPanel;
@@ -478,19 +473,21 @@ public class TechnicianDashboard extends JFrame {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setBackground(BG_CARD2);
         row.setBorder(new EmptyBorder(12, 16, 12, 16));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 68));
+        row.setPreferredSize(new Dimension(0, 68));
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         JPanel left = new JPanel();
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
         left.setOpaque(false);
+        left.setBorder(new EmptyBorder(0, 0, 0, 8));
         JLabel mainLbl = new JLabel(a.getAppointmentID() + "   ·   " + customerName);
         mainLbl.setFont(new Font(F, Font.BOLD, 13));
         mainLbl.setForeground(TEXT_PRIMARY);
         JLabel subLbl = new JLabel(a.getDate() + "  " + a.getTime() + "  ·  " + a.getServiceType());
-        subLbl.setFont(new Font(F, Font.PLAIN, 11));
+        subLbl.setFont(new Font(F, Font.PLAIN, 12));
         subLbl.setForeground(TEXT_MUTED);
         left.add(mainLbl);
-        left.add(Box.createVerticalStrut(3));
+        left.add(Box.createVerticalStrut(5));
         left.add(subLbl);
         boolean done = "Completed".equals(a.getStatus());
         JLabel statusPill = new JLabel(a.getStatus());
@@ -498,7 +495,7 @@ public class TechnicianDashboard extends JFrame {
         statusPill.setForeground(done ? SUCCESS : ACCENT);
         statusPill.setBorder(new EmptyBorder(4, 10, 4, 10));
         statusPill.setHorizontalAlignment(SwingConstants.CENTER);
-        row.add(left,       BorderLayout.WEST);
+        row.add(left,       BorderLayout.CENTER);
         row.add(statusPill, BorderLayout.EAST);
         return row;
     }
@@ -556,297 +553,6 @@ public class TechnicianDashboard extends JFrame {
         updateNavButtonStyles();
     }
 
-    //  PANEL — SERVICE HISTORY (EXTRA FEATURE: Bar Chart)
-    //  Shows completed appointments grouped by month as a styled bar chart.
-    private JPanel buildHistoryPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 16));
-        panel.setBackground(BG_DARK);
-        panel.setBorder(new EmptyBorder(28, 28, 28, 28));
-
-        // Header
-        JPanel head = new JPanel();
-        head.setLayout(new BoxLayout(head, BoxLayout.Y_AXIS));
-        head.setOpaque(false);
-        JLabel heading = new JLabel("Service History");
-        heading.setFont(new Font(F, Font.BOLD, 22));
-        heading.setForeground(TEXT_PRIMARY);
-        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel sub = new JLabel("Visual breakdown of your completed jobs by month");
-        sub.setFont(new Font(F, Font.PLAIN, 13));
-        sub.setForeground(TEXT_MUTED);
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sub.setBorder(new EmptyBorder(4, 0, 0, 0));
-        head.add(heading);
-        head.add(sub);
-
-        // Load this technician's completed jobs
-        String myTechnicianID = FileHandler.getTechnicianIDByUserID(currentTech.getUserID());
-        List<Appointment> myAppts = FileHandler.loadAllAppointments().stream()
-            .filter(a -> {
-                String stored = a.getTechnicianID();
-                return stored.equals(currentTech.getUserID())
-                        || (myTechnicianID != null && stored.equals(myTechnicianID));
-            })
-            .collect(java.util.stream.Collectors.toList());
-
-        // Group completed jobs by month (YYYY-MM)
-        java.util.Map<String, Integer> normalByMonth = new java.util.TreeMap<>();
-        java.util.Map<String, Integer> majorByMonth  = new java.util.TreeMap<>();
-        for (Appointment a : myAppts) {
-            if (!"Completed".equals(a.getStatus())) continue;
-            String date = a.getDate();
-            if (date == null || date.length() < 7) continue;
-            String month = date.substring(0, 7); // YYYY-MM
-            if ("Major".equals(a.getServiceType())) {
-                majorByMonth.merge(month, 1, Integer::sum);
-            } else {
-                normalByMonth.merge(month, 1, Integer::sum);
-            }
-        }
-
-        // Combine all months that appeared in either map
-        java.util.TreeSet<String> allMonths = new java.util.TreeSet<>();
-        allMonths.addAll(normalByMonth.keySet());
-        allMonths.addAll(majorByMonth.keySet());
-
-        // Totals for the summary strip
-        int totalCompleted = myAppts.stream()
-            .filter(a -> "Completed".equals(a.getStatus()))
-            .mapToInt(a -> 1).sum();
-        int totalNormal = normalByMonth.values().stream().mapToInt(Integer::intValue).sum();
-        int totalMajor  = majorByMonth.values().stream().mapToInt(Integer::intValue).sum();
-        int bestMonthCount = 0;
-        String bestMonth = "—";
-        for (String m : allMonths) {
-            int v = normalByMonth.getOrDefault(m, 0) + majorByMonth.getOrDefault(m, 0);
-            if (v > bestMonthCount) { bestMonthCount = v; bestMonth = m; }
-        }
-
-        // Summary cards
-        JPanel summaryRow = new JPanel(new GridLayout(1, 4, 14, 0));
-        summaryRow.setOpaque(false);
-        summaryRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
-        summaryRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        summaryRow.add(makeStatCard("TOTAL JOBS",   String.valueOf(totalCompleted),
-                                    "All completed work",     SUCCESS));
-        summaryRow.add(makeStatCard("NORMAL",       String.valueOf(totalNormal),
-                                    "Regular services",       INFO));
-        summaryRow.add(makeStatCard("MAJOR",        String.valueOf(totalMajor),
-                                    "Major services",         ACCENT));
-        summaryRow.add(makeStatCard("BEST MONTH",   bestMonthCount > 0
-                                        ? String.valueOf(bestMonthCount) : "0",
-                                    bestMonth + " peak",      new Color(168, 85, 247)));
-
-        // Chart card
-        JPanel chartCard = new JPanel(new BorderLayout(0, 14));
-        chartCard.setBackground(BG_CARD);
-        chartCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-            new EmptyBorder(22, 24, 22, 24)));
-
-        JPanel chartHead = new JPanel(new BorderLayout());
-        chartHead.setOpaque(false);
-        JLabel chartTitle = new JLabel("Monthly Completed Jobs");
-        chartTitle.setFont(new Font(F, Font.BOLD, 15));
-        chartTitle.setForeground(TEXT_PRIMARY);
-
-        // Legend
-        JPanel legend = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 0));
-        legend.setOpaque(false);
-        legend.add(makeLegendDot("Normal", INFO));
-        legend.add(makeLegendDot("Major",  ACCENT));
-        chartHead.add(chartTitle, BorderLayout.WEST);
-        chartHead.add(legend,     BorderLayout.EAST);
-
-        // The actual chart
-        BarChartPanel chart = new BarChartPanel(normalByMonth, majorByMonth, allMonths);
-        chart.setPreferredSize(new Dimension(0, 320));
-
-        chartCard.add(chartHead, BorderLayout.NORTH);
-        chartCard.add(chart,     BorderLayout.CENTER);
-
-        // Empty state
-        if (totalCompleted == 0) {
-            JLabel empty = new JLabel("No completed jobs yet — your chart will appear here once you mark jobs as completed.",
-                                     SwingConstants.CENTER);
-            empty.setFont(new Font(F, Font.PLAIN, 13));
-            empty.setForeground(TEXT_MUTED);
-            empty.setBorder(new EmptyBorder(80, 0, 80, 0));
-            chartCard.remove(chart);
-            chartCard.add(empty, BorderLayout.CENTER);
-        }
-
-        // Body assembly
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setOpaque(false);
-        summaryRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        chartCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        body.add(summaryRow);
-        body.add(Box.createVerticalStrut(18));
-        body.add(chartCard);
-        body.add(Box.createVerticalGlue());
-
-        JScrollPane scroll = new JScrollPane(body);
-        scroll.setBorder(null);
-        scroll.setBackground(BG_DARK);
-        scroll.getViewport().setBackground(BG_DARK);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
-
-        panel.add(head,   BorderLayout.NORTH);
-        panel.add(scroll, BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JPanel makeLegendDot(String label, Color color) {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        row.setOpaque(false);
-        JPanel dot = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(color);
-                g2.fillOval(0, 1, 12, 12);
-                g2.dispose();
-            }
-        };
-        dot.setOpaque(false);
-        dot.setPreferredSize(new Dimension(12, 14));
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font(F, Font.PLAIN, 12));
-        lbl.setForeground(TEXT_PRIMARY);
-        row.add(dot);
-        row.add(lbl);
-        return row;
-    }
-
-    private void refreshHistoryPanel() {
-        contentPanel.remove(historyPanel);
-        historyPanel = buildHistoryPanel();
-        contentPanel.add(historyPanel, "HISTORY");
-    }
-
-    /**
-     * Custom-painted bar chart showing Normal + Major jobs per month.
-     * Uses anti-aliased Graphics2D and animates from 0 to full height on first paint.
-     */
-    private class BarChartPanel extends JPanel {
-        private final java.util.Map<String, Integer> normalMap;
-        private final java.util.Map<String, Integer> majorMap;
-        private final java.util.List<String> months;
-        private float progress = 0f;
-        private final javax.swing.Timer animTimer;
-
-        BarChartPanel(java.util.Map<String, Integer> normalMap,
-                      java.util.Map<String, Integer> majorMap,
-                      java.util.Set<String> allMonths) {
-            this.normalMap = normalMap;
-            this.majorMap  = majorMap;
-            this.months    = new ArrayList<>(allMonths);
-            setOpaque(false);
-            // Smooth grow-in animation
-            animTimer = new javax.swing.Timer(20, null);
-            animTimer.addActionListener(e -> {
-                progress = Math.min(1f, progress + 0.06f);
-                repaint();
-                if (progress >= 1f) animTimer.stop();
-            });
-            animTimer.start();
-        }
-
-        @Override protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                                RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                                RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            int W = getWidth(), H = getHeight();
-            int padL = 50, padR = 24, padT = 16, padB = 44;
-            int chartW = W - padL - padR;
-            int chartH = H - padT - padB;
-            if (chartW <= 0 || chartH <= 0 || months.isEmpty()) {
-                g2.dispose(); return;
-            }
-
-            // Find max value for scaling
-            int max = 1;
-            for (String m : months) {
-                int v = normalMap.getOrDefault(m, 0) + majorMap.getOrDefault(m, 0);
-                if (v > max) max = v;
-            }
-            // Round up to nice number
-            int ySteps = Math.min(max, 5);
-            if (ySteps < 1) ySteps = 1;
-
-            // Draw horizontal grid lines + Y-axis labels
-            g2.setFont(new Font(F, Font.PLAIN, 10));
-            g2.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
-                                        0, new float[]{3, 4}, 0));
-            for (int i = 0; i <= ySteps; i++) {
-                int y = padT + chartH - (chartH * i / ySteps);
-                int value = (max * i) / ySteps;
-                g2.setColor(BORDER_COLOR);
-                g2.drawLine(padL, y, padL + chartW, y);
-                g2.setColor(TEXT_MUTED);
-                g2.drawString(String.valueOf(value), padL - 26, y + 4);
-            }
-            g2.setStroke(new BasicStroke(1f));
-
-            // Bars: each month has Normal (blue) and Major (amber) stacked
-            int slotW = chartW / months.size();
-            int barW = Math.min(38, slotW - 16);
-            if (barW < 12) barW = Math.max(6, slotW - 4);
-
-            for (int i = 0; i < months.size(); i++) {
-                String m = months.get(i);
-                int normal = normalMap.getOrDefault(m, 0);
-                int major  = majorMap.getOrDefault(m, 0);
-                int total  = normal + major;
-
-                int slotX = padL + i * slotW;
-                int barX  = slotX + (slotW - barW) / 2;
-
-                int totalBarH = (int) (chartH * total / (double) max * progress);
-                int normalH   = (int) (chartH * normal / (double) max * progress);
-                int majorH    = totalBarH - normalH;
-
-                int yBase = padT + chartH;
-
-                // Draw Major (top) — amber
-                if (major > 0) {
-                    g2.setColor(ACCENT);
-                    g2.fillRoundRect(barX, yBase - totalBarH, barW, majorH, 6, 6);
-                }
-                // Draw Normal (bottom) — blue
-                if (normal > 0) {
-                    g2.setColor(INFO);
-                    int normY = yBase - normalH;
-                    g2.fillRoundRect(barX, normY, barW, normalH, 6, 6);
-                }
-
-                // Value label on top of bar (only when animation is mostly done)
-                if (progress > 0.85f && total > 0) {
-                    g2.setFont(new Font(F, Font.BOLD, 11));
-                    g2.setColor(TEXT_PRIMARY);
-                    String label = String.valueOf(total);
-                    int labelW = g2.getFontMetrics().stringWidth(label);
-                    g2.drawString(label, barX + (barW - labelW) / 2, yBase - totalBarH - 6);
-                }
-
-                // Month label below
-                g2.setFont(new Font(F, Font.PLAIN, 10));
-                g2.setColor(TEXT_MUTED);
-                String monthLabel = m.substring(5) + "/" + m.substring(2, 4); // MM/YY
-                int labelW = g2.getFontMetrics().stringWidth(monthLabel);
-                g2.drawString(monthLabel, barX + (barW - labelW) / 2, yBase + 18);
-            }
-
-            g2.dispose();
-        }
-    }
-
     private void refreshCommentsPanel() {
         contentPanel.remove(commentsPanel);
         commentsPanel = buildCommentsPanel();
@@ -895,9 +601,12 @@ public class TechnicianDashboard extends JFrame {
             profileCard.add(Box.createVerticalStrut(24));
 
             JButton editBtn = makePrimaryButton("\u270F  Edit Profile");
-            editBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             editBtn.addActionListener(e -> enterProfileEditMode());
-            profileCard.add(editBtn);
+            JPanel editButtonRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            editButtonRow.setOpaque(false);
+            editButtonRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+            editButtonRow.add(editBtn);
+            profileCard.add(editButtonRow);
         } else {
             JPanel fullNameRow = new JPanel(new BorderLayout(16, 0));
             fullNameRow.setOpaque(false);
@@ -1613,7 +1322,6 @@ public class TechnicianDashboard extends JFrame {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel lbl = new JLabel(label + ":");
         lbl.setFont(new Font(F, Font.PLAIN, 13));
         lbl.setForeground(TEXT_MUTED);
@@ -1628,19 +1336,15 @@ public class TechnicianDashboard extends JFrame {
 
     private JButton makePrimaryButton(String label) {
         JButton btn = new JButton(label);
-        btn.setFont(new Font(F, Font.BOLD, 14));
-        btn.setForeground(TEXT_PRIMARY);
-        btn.setBackground(new Color(0, 0, 0, 0));
-        btn.setOpaque(false);
-        btn.setContentAreaFilled(false);
+        btn.setFont(new Font(F, Font.BOLD, 13));
+        btn.setForeground(Color.WHITE);
+        btn.setBackground(ACCENT);
+        btn.setOpaque(true);
+        btn.setContentAreaFilled(true);
         btn.setBorderPainted(false);
         btn.setBorder(new EmptyBorder(10, 18, 10, 18));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(ACCENT); }
-            @Override public void mouseExited(MouseEvent e)  { btn.setForeground(TEXT_PRIMARY); }
-        });
         return btn;
     }
 
@@ -1683,7 +1387,7 @@ public class TechnicianDashboard extends JFrame {
         btn.setBackground(new Color(0, 0, 0, 0));
         btn.setOpaque(false);
         btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
+        btn.setBorderPainted(true);
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
@@ -1709,12 +1413,6 @@ public class TechnicianDashboard extends JFrame {
                 activeCardName = cardName;
                 updateNavButtonStyles();
             }
-            else if ("HISTORY".equals(cardName)) {
-                refreshHistoryPanel();
-                contentLayout.show(contentPanel, cardName);
-                activeCardName = cardName;
-                updateNavButtonStyles();
-            }
             else {
                 contentLayout.show(contentPanel, cardName);
                 activeCardName = cardName;
@@ -1722,7 +1420,14 @@ public class TechnicianDashboard extends JFrame {
             }
         });
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(TEXT_PRIMARY); }
+            @Override public void mouseEntered(MouseEvent e) {
+                btn.setForeground(TEXT_PRIMARY);
+                if (!activeCardName.equals(btn.getClientProperty("cardName"))) {
+                    btn.setOpaque(true);
+                    btn.setContentAreaFilled(true);
+                    btn.setBackground(BG_CARD2);
+                }
+            }
             @Override public void mouseExited(MouseEvent e)  { updateNavButtonStyle(btn); }
         });
         return btn;
@@ -1737,11 +1442,10 @@ public class TechnicianDashboard extends JFrame {
     private void updateNavButtonStyle(JButton button) {
         boolean active = activeCardName.equals(button.getClientProperty("cardName"));
         button.setForeground(active ? TEXT_PRIMARY : TEXT_MUTED);
-        button.setBorder(active
-                ? BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 3, 0, 0, ACCENT),
-                        new EmptyBorder(12, 17, 12, 20))
-                : new EmptyBorder(12, 20, 12, 20));
+        button.setOpaque(active);
+        button.setContentAreaFilled(active);
+        button.setBackground(active ? BG_CARD2 : new Color(0, 0, 0, 0));
+        button.setBorder(new EmptyBorder(12, 20, 12, 20));
     }
 
     private JTable makeStyledTable(DefaultTableModel model) {

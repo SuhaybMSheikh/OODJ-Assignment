@@ -2273,13 +2273,13 @@ public class ManagerDashboard extends JFrame {
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
         long totalAppointments = allAppointments.size();
         long pending = allAppointments.stream()
-            .filter(a -> "Pending".equalsIgnoreCase(a.getStatus())).count();
+            .filter(a -> "Ongoing".equalsIgnoreCase(a.getStatus())).count();
         long completed = allAppointments.stream()
             .filter(a -> "Completed".equalsIgnoreCase(a.getStatus())).count();
         double totalRevenue = calculateTotalRevenue();
 
         statsRow.add(makeCompactStatCard("Total Appointments", String.valueOf(totalAppointments), ACCENT));
-        statsRow.add(makeCompactStatCard("Pending", String.valueOf(pending), new Color(245, 158, 11)));
+        statsRow.add(makeCompactStatCard("Ongoing", String.valueOf(pending), new Color(245, 158, 11)));
         statsRow.add(makeCompactStatCard("Completed", String.valueOf(completed), SUCCESS));
         statsRow.add(makeCompactStatCard("Total Revenue", String.format("RM %.2f", totalRevenue), new Color(14, 165, 233)));
 
@@ -2468,11 +2468,11 @@ public class ManagerDashboard extends JFrame {
         panel.setBackground(BG_DARK);
 
         List<Appointment> allAppointments = FileHandler.loadAllAppointments();
-        long pending = allAppointments.stream().filter(a -> "Pending".equalsIgnoreCase(a.getStatus())).count();
+        long pending = allAppointments.stream().filter(a -> "Ongoing".equalsIgnoreCase(a.getStatus())).count();
         long completedCount = allAppointments.stream().filter(a -> "Completed".equalsIgnoreCase(a.getStatus())).count();
 
         java.util.Map<String, Long> statusData = new java.util.LinkedHashMap<>();
-        statusData.put("Pending", pending);
+        statusData.put("Ongoing", pending);
         statusData.put("Completed", completedCount);
 
         panel.add(createPieChartPanel("Appointment Status", statusData, new Color[]{
@@ -2500,7 +2500,7 @@ public class ManagerDashboard extends JFrame {
 
         addSummaryRow(summaryPanel, "Total Appointments:", String.valueOf(totalApts));
         addSummaryRow(summaryPanel, "Completed:", String.valueOf(completedCount));
-        addSummaryRow(summaryPanel, "Pending:", String.valueOf(pending));
+        addSummaryRow(summaryPanel, "Ongoing:", String.valueOf(pending));
         addSummaryRow(summaryPanel, "Completion Rate:", String.format("%.1f%%", completionRate));
 
         panel.add(summaryPanel, BorderLayout.CENTER);

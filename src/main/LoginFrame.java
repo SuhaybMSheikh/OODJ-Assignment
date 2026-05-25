@@ -177,9 +177,9 @@ public class LoginFrame extends JFrame {
         grid.setAlignmentX(Component.LEFT_ALIGNMENT);
         grid.setMaximumSize(new Dimension(500, 260));
         grid.add(makeRoleCard("Manager",      "Manage users & reports", COL_MANAGER,  "M"));
-        grid.add(makeRoleCard("CounterStaff", "Bookings & payments",    COL_STAFF,    "C"));
+        grid.add(makeRoleCard("CounterStaff", "Bookings & payments",    COL_STAFF,    "CS"));
         grid.add(makeRoleCard("Technician",   "Service appointments",   COL_TECH,     "T"));
-        grid.add(makeRoleCard("Customer",     "Your service history",   COL_CUSTOMER, "K"));
+        grid.add(makeRoleCard("Customer",     "Vehicle & service history", COL_CUSTOMER, "C"));
 
         centre.add(heading);
         centre.add(Box.createVerticalStrut(6));
@@ -441,7 +441,8 @@ public class LoginFrame extends JFrame {
                 g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 30));
                 g2.fillOval(0, 0, 40, 40);
                 g2.setColor(accent);
-                g2.setFont(new Font("SansSerif", Font.BOLD, 16));
+                int avatarFontSize = "CS".equals(initial) ? 14 : 16;
+                g2.setFont(new Font("SansSerif", Font.BOLD, avatarFontSize));
                 FontMetrics fm = g2.getFontMetrics();
                 g2.drawString(initial,
                     (40 - fm.stringWidth(initial)) / 2,

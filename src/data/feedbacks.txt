@@ -1,5 +1,2 @@
-A001|T001|Engine oil and brake oil changed.
-A002|T002|Brake pads inspected and replaced due to wear.
-A003|T003|Battery tested and terminals cleaned for better connection.
-A004|T004|Tyre pressure adjusted and wheel alignment was completed.
-A005|T005|Air filter cleaned and engine checked for smooth performance.
+A003|U003|Engine oil and brake oil changed.
+A001|U004|Brake pads inspected and replaced due to wear.

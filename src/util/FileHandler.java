@@ -411,6 +411,7 @@ public class FileHandler {
      */
     public static void updateServicePrice(String serviceType, double newPrice) {
         List<String> lines = new ArrayList<>();
+        boolean updated = false;
         try (BufferedReader reader = new BufferedReader(new FileReader(SERVICES_FILE))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -418,11 +419,16 @@ public class FileHandler {
                 if (p.length >= 2 && p[0].equalsIgnoreCase(serviceType)) {
                     // Replace the price in this line but keep the duration
                     line = p[0] + "|" + String.format("%.2f", newPrice) + "|" + (p.length >= 3 ? p[2] : "1");
+                    updated = true;
                 }
                 lines.add(line);
             }
         } catch (IOException e) {
             System.err.println("Error reading services: " + e.getMessage());
+        }
+
+        if (!updated) {
+            lines.add(serviceType + "|" + String.format("%.2f", newPrice) + "|1");
         }
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(SERVICES_FILE))) {
@@ -442,23 +448,28 @@ public class FileHandler {
      */
     public static void updateService(String serviceType, double newPrice, String newDuration) {
         List<String> lines = new ArrayList<>();
+        boolean updated = false;
+        String durationNumber = newDuration.replaceAll("[^0-9]", "");
+        if (durationNumber.isEmpty()) {
+            durationNumber = "1";  // default
+        }
         try (BufferedReader reader = new BufferedReader(new FileReader(SERVICES_FILE))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split("\\|");
                 if (p.length >= 2 && p[0].equalsIgnoreCase(serviceType)) {
                     // Update price and duration, keep service type as key
-                    // Parse duration to extract just the number (e.g., "1 hour" -> 1)
-                    String durationNumber = newDuration.replaceAll("[^0-9]", "");
-                    if (durationNumber.isEmpty()) {
-                        durationNumber = "1";  // default
-                    }
                     line = p[0] + "|" + String.format("%.2f", newPrice) + "|" + durationNumber;
+                    updated = true;
                 }
                 lines.add(line);
             }
         } catch (IOException e) {
             System.err.println("Error reading services: " + e.getMessage());
+        }
+
+        if (!updated) {
+            lines.add(serviceType + "|" + String.format("%.2f", newPrice) + "|" + durationNumber);
         }
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(SERVICES_FILE))) {

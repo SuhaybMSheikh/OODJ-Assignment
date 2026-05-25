@@ -270,7 +270,7 @@ public class ManagerDashboard extends JFrame {
         statsGrid.setOpaque(false);
         statsGrid.add(wrapManagerStatCard(createManagerStatCard("\uD83D\uDCCA", "TOTAL APPOINTMENTS",
             homeAppointmentsValue, "All bookings in the system", blueAccent, false)));
-        statsGrid.add(wrapManagerStatCard(createManagerStatCard("\u23F3", "PENDING APPOINTMENTS",
+        statsGrid.add(wrapManagerStatCard(createManagerStatCard("\u23F3", "ONGOING APPOINTMENTS",
             homePendingValue, "Awaiting completion", orangeAccent, true)));
         statsGrid.add(wrapManagerStatCard(createManagerStatCard("\uD83D\uDC65", "STAFF ACCOUNTS",
             homeStaffValue, "Managers, counter staff & technicians", greenAccent, false)));
@@ -430,7 +430,7 @@ public class ManagerDashboard extends JFrame {
         List<Appointment> appointments = FileHandler.loadAllAppointments();
         homeAppointmentsValue.setText(String.valueOf(appointments.size()));
         homePendingValue.setText(String.valueOf(
-            appointments.stream().filter(a -> "Pending".equalsIgnoreCase(a.getStatus())).count()));
+            appointments.stream().filter(a -> "Ongoing".equalsIgnoreCase(a.getStatus())).count()));
         homeStaffValue.setText(String.valueOf(loadManageableUsers().size()));
         homeFeedbackValue.setText(String.valueOf(countFeedbacksAndComments()));
     }

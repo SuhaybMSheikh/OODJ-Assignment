@@ -1,2 +1,2 @@
-A003|U003|Engine oil and brake oil changed.
-A001|U004|Brake pads inspected and replaced due to wear.
+A001|T001|Engine oil and brake oil changed.
+A003|T001|Brake pads inspected and replaced to due wear.

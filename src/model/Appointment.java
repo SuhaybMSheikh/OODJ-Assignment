@@ -48,6 +48,7 @@ public class Appointment {
     public String getCounterStaffID() { return counterStaffID; }
 
     // SETTERS
+    public void setCustomerID(String customerID)     { this.customerID = customerID; }
     public void setStatus(String status)           { this.status = status; }
     public void setTechnicianID(String techID)     { this.technicianID = techID; }
     public void setDate(String date)               { this.date = date; }

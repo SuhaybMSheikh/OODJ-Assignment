@@ -1,2 +1,5 @@
-A001|C001|T001|2026-05-24|09:00|Normal|Completed|Sarah Lim
-A002|C002|T002|2026-05-25|10:00|Major|Ongoing|Sarah Lim
+A001|C001|T001|2026-05-26|10:00|Normal|Completed|Sarah Lim
+A002|C005|T002|2026-05-27|11:00|Major|Ongoing|Sarah Lim
+A003|C002|T001|2026-05-28|10:00|Normal|Completed|Sarah Lim
+A004|C004|T001|2026-05-29|14:00|Major|Ongoing|Sarah Lim
+A005|C003|T002|2026-05-30|11:00|Major|Ongoing|Sarah Lim

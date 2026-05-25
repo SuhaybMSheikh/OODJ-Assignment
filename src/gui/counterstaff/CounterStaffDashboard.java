@@ -263,7 +263,9 @@ public class CounterStaffDashboard extends JFrame {
         try {
             double total = 0.0;
             for (Payment payment : FileHandler.loadAllPayments()) {
-                total += payment.getAmount();
+                if ("Paid".equalsIgnoreCase(payment.getStatus())) {
+                    total += payment.getAmount();
+                }
             }
             revenueCollected = "RM " + String.format("%.2f", total);
         } catch (Exception ex) {
@@ -1350,6 +1352,16 @@ public class CounterStaffDashboard extends JFrame {
 
         // --- Button action ---
         newBtn.addActionListener(e -> showNewAppointmentDialog(model));
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row < 0) return;
+                int modelRow = table.convertRowIndexToModel(row);
+                String apptID = (String) model.getValueAt(modelRow, 0);
+                showEditAppointmentDialog(model, apptID);
+            }
+        });
 
         panel.add(headerRow, BorderLayout.NORTH);
         panel.add(scroll, BorderLayout.CENTER);
@@ -1670,12 +1682,17 @@ public class CounterStaffDashboard extends JFrame {
     }
 
     private boolean isTechnicianAvailable(String technicianUserID, String date, String time, String serviceType) {
+        return isTechnicianAvailable(technicianUserID, date, time, serviceType, null);
+    }
+
+    private boolean isTechnicianAvailable(String technicianUserID, String date, String time, String serviceType, String ignoredAppointmentID) {
         int newDuration = FileHandler.getServiceDuration(serviceType);
         int newStart = timeToMinutes(time);
         if (newStart < 0) return false;
         int newEnd = newStart + (newDuration * 60);
 
         for (Appointment a : FileHandler.loadAllAppointments()) {
+            if (ignoredAppointmentID != null && ignoredAppointmentID.equals(a.getAppointmentID())) continue;
             if (!isAppointmentForTechnicianUser(a, technicianUserID)) continue;
             if (!a.getDate().equals(date)) continue;
 
@@ -1689,6 +1706,262 @@ public class CounterStaffDashboard extends JFrame {
             }
         }
         return true;
+    }
+
+    private void showEditAppointmentDialog(DefaultTableModel tableModel, String appointmentID) {
+        Appointment target = null;
+        for (Appointment a : FileHandler.loadAllAppointments()) {
+            if (a.getAppointmentID().equals(appointmentID)) {
+                target = a;
+                break;
+            }
+        }
+        if (target == null) {
+            JOptionPane.showMessageDialog(this, "Appointment not found.");
+            refreshAppointmentsTable(tableModel);
+            return;
+        }
+
+        Appointment original = target;
+        JDialog dialog = new JDialog(this, "Edit Appointment", true);
+        dialog.setSize(460, 520);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(BG_CARD);
+        content.setBorder(new EmptyBorder(24, 28, 24, 28));
+
+        JLabel titleLbl = new JLabel("Edit Appointment");
+        titleLbl.setFont(new Font("SansSerif", Font.BOLD, 18));
+        titleLbl.setForeground(TEXT_PRIMARY);
+        titleLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(titleLbl);
+        content.add(Box.createVerticalStrut(16));
+
+        List<String[]> customerData = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] p = line.split("\\|");
+                if (p.length >= 3) {
+                    customerData.add(new String[] { p[0], p[1] + " " + p[2] });
+                }
+            }
+        } catch (IOException ex) {
+            System.err.println("Error reading customers.txt: " + ex.getMessage());
+        }
+
+        JComboBox<String> customerCombo = new JComboBox<>();
+        int selectedCustomerIndex = -1;
+        for (int i = 0; i < customerData.size(); i++) {
+            customerCombo.addItem(customerData.get(i)[1]);
+            if (customerData.get(i)[0].equals(original.getCustomerID())) {
+                selectedCustomerIndex = i;
+            }
+        }
+        if (selectedCustomerIndex >= 0) {
+            customerCombo.setSelectedIndex(selectedCustomerIndex);
+        }
+        styleComboBox(customerCombo);
+
+        JComboBox<String> serviceCombo = new JComboBox<>(new String[] { "Normal", "Major" });
+        serviceCombo.setSelectedItem(original.getServiceType());
+        styleComboBox(serviceCombo);
+
+        JTextField dateField = makeEditableTextField(original.getDate());
+        dateField.setForeground(TEXT_PRIMARY);
+
+        JComboBox<String> timeCombo = new JComboBox<>();
+        for (int hour = 8; hour <= 17; hour++) {
+            timeCombo.addItem(String.format("%02d:00", hour));
+            if (hour < 17) {
+                timeCombo.addItem(String.format("%02d:30", hour));
+            }
+        }
+        timeCombo.setSelectedItem(original.getTime());
+        styleComboBox(timeCombo);
+
+        JComboBox<String> techCombo = new JComboBox<>();
+        styleComboBox(techCombo);
+
+        List<User> allTechnicians = new ArrayList<>();
+        for (User u : FileHandler.loadAllUsers()) {
+            if ("Technician".equals(u.getRole())) {
+                allTechnicians.add(u);
+            }
+        }
+
+        List<String> availableTechIDs = new ArrayList<>();
+        Runnable refreshTechs = () -> {
+            String selectedTechUserID = null;
+            int selectedIndex = techCombo.getSelectedIndex();
+            if (selectedIndex >= 0 && selectedIndex < availableTechIDs.size()) {
+                selectedTechUserID = availableTechIDs.get(selectedIndex);
+            }
+            if (selectedTechUserID == null) {
+                selectedTechUserID = FileHandler.getUserIDByTechnicianID(original.getTechnicianID());
+            }
+
+            techCombo.removeAllItems();
+            availableTechIDs.clear();
+            String d = dateField.getText().trim();
+            String t = (String) timeCombo.getSelectedItem();
+            String s = (String) serviceCombo.getSelectedItem();
+
+            boolean validInput = !d.isEmpty()
+                    && d.matches("\\d{4}-\\d{2}-\\d{2}")
+                    && t != null
+                    && t.matches("\\d{2}:\\d{2}");
+
+            int nextSelectedIndex = -1;
+            for (User tech : allTechnicians) {
+                if (!validInput || isTechnicianAvailable(tech.getUserID(), d, t, s, appointmentID)) {
+                    techCombo.addItem(tech.getFullName());
+                    availableTechIDs.add(tech.getUserID());
+                    if (tech.getUserID().equals(selectedTechUserID)) {
+                        nextSelectedIndex = availableTechIDs.size() - 1;
+                    }
+                }
+            }
+            if (nextSelectedIndex >= 0) {
+                techCombo.setSelectedIndex(nextSelectedIndex);
+            }
+        };
+        refreshTechs.run();
+
+        javax.swing.event.DocumentListener docListener = new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshTechs.run(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshTechs.run(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshTechs.run(); }
+        };
+        dateField.getDocument().addDocumentListener(docListener);
+        timeCombo.addActionListener(e -> refreshTechs.run());
+        serviceCombo.addActionListener(e -> refreshTechs.run());
+
+        content.add(makeDialogComboRow("Customer", customerCombo));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogComboRow("Service Type", serviceCombo));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogFieldRow("Date", dateField));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogComboRow("Time", timeCombo));
+        content.add(Box.createVerticalStrut(8));
+        content.add(makeDialogComboRow("Technician", techCombo));
+        content.add(Box.createVerticalStrut(12));
+
+        JLabel errLbl = new JLabel(" ");
+        errLbl.setForeground(DANGER);
+        errLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        errLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(errLbl);
+        content.add(Box.createVerticalStrut(8));
+
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        btnRow.setOpaque(false);
+        btnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JButton saveBtn = makePrimaryButton("Save Changes");
+        JButton deleteBtn = makeSecondaryButton("Delete");
+        deleteBtn.setForeground(DANGER);
+        JButton cancelBtn = makeSecondaryButton("Cancel");
+        btnRow.add(saveBtn);
+        btnRow.add(deleteBtn);
+        btnRow.add(cancelBtn);
+        content.add(btnRow);
+
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        deleteBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(dialog,
+                    "Delete appointment " + appointmentID + "?",
+                    "Delete Appointment",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return;
+
+            List<Appointment> appointments = FileHandler.loadAllAppointments();
+            appointments.removeIf(a -> a.getAppointmentID().equals(appointmentID));
+            FileHandler.saveAllAppointments(appointments);
+
+            List<Payment> payments = FileHandler.loadAllPayments();
+            payments.removeIf(p -> p.getAppointmentID().equals(appointmentID));
+            FileHandler.saveAllPayments(payments);
+
+            refreshAppointmentsTable(tableModel);
+            dialog.dispose();
+        });
+
+        saveBtn.addActionListener(e -> {
+            int custIdx = customerCombo.getSelectedIndex();
+            if (custIdx < 0) { errLbl.setText("Please select a customer."); return; }
+
+            String date = dateField.getText().trim();
+            String time = (String) timeCombo.getSelectedItem();
+
+            if (date.isEmpty()) {
+                errLbl.setText("Please enter a date (YYYY-MM-DD)."); return;
+            }
+            if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                errLbl.setText("Date must be in YYYY-MM-DD format."); return;
+            }
+            if (time == null || time.isEmpty()) {
+                errLbl.setText("Please enter a time (HH:MM)."); return;
+            }
+            if (!time.matches("\\d{2}:\\d{2}") || timeToMinutes(time) < 0) {
+                errLbl.setText("Time must be a valid HH:MM time."); return;
+            }
+
+            int techIdx = techCombo.getSelectedIndex();
+            if (techIdx < 0) {
+                errLbl.setText("No available technician for this slot."); return;
+            }
+
+            String serviceType = (String) serviceCombo.getSelectedItem();
+            String technicianUserID = availableTechIDs.get(techIdx);
+            String technicianID = FileHandler.getTechnicianIDByUserID(technicianUserID);
+            if (technicianID == null) {
+                errLbl.setText("Could not resolve technician ID.");
+                return;
+            }
+
+            List<Appointment> appointments = FileHandler.loadAllAppointments();
+            for (Appointment a : appointments) {
+                if (a.getAppointmentID().equals(appointmentID)) {
+                    a.setCustomerID(customerData.get(custIdx)[0]);
+                    a.setTechnicianID(technicianID);
+                    a.setDate(date);
+                    a.setTime(time);
+                    a.setServiceType(serviceType);
+                    break;
+                }
+            }
+            FileHandler.saveAllAppointments(appointments);
+
+            double serviceFee = FileHandler.getServicePrice(serviceType);
+            List<Payment> payments = FileHandler.loadAllPayments();
+            boolean paymentFound = false;
+            for (Payment payment : payments) {
+                if (payment.getAppointmentID().equals(appointmentID)) {
+                    payment.setAmount(serviceFee);
+                    payment.setDate(date);
+                    paymentFound = true;
+                    break;
+                }
+            }
+            if (!paymentFound) {
+                payments.add(new Payment(FileHandler.generateNextPaymentID(), appointmentID, serviceFee, date, "Pending"));
+            }
+            FileHandler.saveAllPayments(payments);
+
+            refreshAppointmentsTable(tableModel);
+            dialog.dispose();
+        });
+
+        dialog.setContentPane(content);
+        dialog.setVisible(true);
     }
 
     /**
@@ -1782,6 +2055,20 @@ public class CounterStaffDashboard extends JFrame {
                 String customerName = (String) table.getValueAt(row, 2);
                 String serviceType = (String) table.getValueAt(row, 3);
                 double amount = Double.parseDouble(table.getValueAt(row, 5).toString());
+                Appointment selectedAppointment = null;
+                for (Appointment a : FileHandler.loadAllAppointments()) {
+                    if (a.getAppointmentID().equals(apptID)) {
+                        selectedAppointment = a;
+                        break;
+                    }
+                }
+                if (selectedAppointment == null || !"Completed".equalsIgnoreCase(selectedAppointment.getStatus())) {
+                    JOptionPane.showMessageDialog(this,
+                            "Payment can only be collected after the technician completes the appointment.",
+                            "Appointment Not Completed",
+                            JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
                 showCollectPaymentDialog(model, apptID, customerName, serviceType, amount);
             }
         });
@@ -1918,7 +2205,7 @@ public class CounterStaffDashboard extends JFrame {
             List<Appointment> appts = FileHandler.loadAllAppointments();
             for (Appointment a : appts) {
                 if (a.getAppointmentID().equals(apptID)) {
-                    a.setStatus("Paid");
+                    a.setStatus("Completed");
                     break;
                 }
             }
@@ -2055,6 +2342,16 @@ public class CounterStaffDashboard extends JFrame {
         contentPanel.add(dashboardPanel, "DASHBOARD");
     }
 
+    private void refreshContentPanels() {
+        contentPanel.removeAll();
+        dashboardPanel = buildDashboardPanel();
+        contentPanel.add(dashboardPanel, "DASHBOARD");
+        contentPanel.add(buildProfilePanel(), "PROFILE");
+        contentPanel.add(buildCustomersPanel(), "CUSTOMERS");
+        contentPanel.add(buildAppointmentsPanel(), "APPOINTMENTS");
+        contentPanel.add(buildPaymentsPanel(), "PAYMENTS");
+    }
+
     private void navigateToPanel(String cardName) {
         if (profileEditMode) {
             int result = JOptionPane.showConfirmDialog(this,
@@ -2066,9 +2363,7 @@ public class CounterStaffDashboard extends JFrame {
                 return;
             exitProfileEditMode();
         }
-        if ("DASHBOARD".equals(cardName)) {
-            refreshDashboardPanel();
-        }
+        refreshContentPanels();
         contentLayout.show(contentPanel, cardName);
         activeCardName = cardName;
         updateNavButtonStyles();

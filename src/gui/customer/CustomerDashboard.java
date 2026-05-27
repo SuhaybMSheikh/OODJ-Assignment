@@ -24,6 +24,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -56,7 +57,10 @@ public class CustomerDashboard extends JFrame {
     // LAYOUT
     private CardLayout contentLayout;
     private JPanel     contentPanel;
+    private JPanel     dashboardPanel;
     private JPanel     historyPanel;
+    private JPanel     technicianFeedbackPanel;
+    private JPanel     commentPanel;
     private String activeCardName = "DASHBOARD";
     private List<JButton> navButtons = new ArrayList<>();
 
@@ -206,12 +210,15 @@ public class CustomerDashboard extends JFrame {
         contentPanel  = new JPanel(contentLayout);
         contentPanel.setBackground(BG_DARK);
 
-        contentPanel.add(buildDashboardPanel(), "DASHBOARD");
+        dashboardPanel = buildDashboardPanel();
+        contentPanel.add(dashboardPanel, "DASHBOARD");
         contentPanel.add(buildProfilePanel(), "PROFILE");
         historyPanel = buildHistoryPanel();
         contentPanel.add(historyPanel, "HISTORY");
-        contentPanel.add(buildTechnicianFeedbackPanel(), "TECH_FEEDBACK");
-        contentPanel.add(buildCommentPanel(), "COMMENT");
+        technicianFeedbackPanel = buildTechnicianFeedbackPanel();
+        contentPanel.add(technicianFeedbackPanel, "TECH_FEEDBACK");
+        commentPanel = buildCommentPanel();
+        contentPanel.add(commentPanel, "COMMENT");
 
         contentLayout.show(contentPanel, "DASHBOARD");
         return contentPanel;
@@ -303,7 +310,7 @@ public class CustomerDashboard extends JFrame {
         String nextApptDate = "No appointment";
         String nextApptDetails = "";
         Appointment nextPendingAppt = myAppointments.stream()
-            .filter(a -> "Pending".equals(a.getStatus()))
+            .filter(a -> "Ongoing".equals(a.getStatus()))
             .sorted((a1, a2) -> a1.getDate().compareTo(a2.getDate()))
             .findFirst().orElse(null);
 
@@ -959,6 +966,8 @@ public class CustomerDashboard extends JFrame {
         });
 
         JTable table = makeStyledTable(model);
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+        table.setRowSorter(sorter);
         table.getColumnModel().getColumn(3).setPreferredWidth(180); // technician
         table.getColumnModel().getColumn(4).setPreferredWidth(360); // feedback
         table.setToolTipText("Double-click an appointment to view full feedback");
@@ -975,6 +984,45 @@ public class CustomerDashboard extends JFrame {
         });
         JScrollPane scroll = makeScrollPane(table);
 
+        JTextField searchField = new JTextField();
+        searchField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        searchField.setForeground(TEXT_PRIMARY);
+        searchField.setBackground(BG_CARD2);
+        searchField.setCaretColor(TEXT_PRIMARY);
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(10, 12, 10, 12)
+        ));
+        searchField.setToolTipText("Search technician feedback comments");
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            private void filterFeedback() {
+                String searchText = searchField.getText().trim();
+                if (searchText.isEmpty()) {
+                    sorter.setRowFilter(null);
+                } else {
+                    sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(searchText), 4));
+                }
+            }
+
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { filterFeedback(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { filterFeedback(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { filterFeedback(); }
+        });
+
+        JLabel searchLabel = new JLabel("Search feedback comments");
+        searchLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        searchLabel.setForeground(TEXT_MUTED);
+
+        JPanel searchPanel = new JPanel(new BorderLayout(0, 8));
+        searchPanel.setOpaque(false);
+        searchPanel.add(searchLabel, BorderLayout.NORTH);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+
+        JPanel tablePanel = new JPanel(new BorderLayout(0, 14));
+        tablePanel.setOpaque(false);
+        tablePanel.add(searchPanel, BorderLayout.NORTH);
+        tablePanel.add(scroll, BorderLayout.CENTER);
+
         panel.add(heading, BorderLayout.NORTH);
         if (model.getRowCount() == 0) {
             JLabel empty = new JLabel("No technician feedback available for your appointments yet.");
@@ -983,7 +1031,7 @@ public class CustomerDashboard extends JFrame {
             empty.setHorizontalAlignment(SwingConstants.CENTER);
             panel.add(empty, BorderLayout.CENTER);
         } else {
-            panel.add(scroll, BorderLayout.CENTER);
+            panel.add(tablePanel, BorderLayout.CENTER);
         }
         return panel;
     }
@@ -1427,9 +1475,7 @@ public class CustomerDashboard extends JFrame {
                 }
                 exitProfileEditMode();
             }
-            if ("HISTORY".equals(cardName)) {
-                refreshHistoryPanel();
-            }
+            refreshCustomerMenuPanel(cardName);
             contentLayout.show(contentPanel, cardName);
             activeCardName = cardName;
             updateNavButtonStyles();
@@ -1476,10 +1522,31 @@ public class CustomerDashboard extends JFrame {
         return btn;
     }
 
-    private void refreshHistoryPanel() {
-        contentPanel.remove(historyPanel);
-        historyPanel = buildHistoryPanel();
-        contentPanel.add(historyPanel, "HISTORY");
+    private void refreshCustomerMenuPanel(String cardName) {
+        switch (cardName) {
+            case "DASHBOARD":
+                contentPanel.remove(dashboardPanel);
+                dashboardPanel = buildDashboardPanel();
+                contentPanel.add(dashboardPanel, "DASHBOARD");
+                break;
+            case "HISTORY":
+                contentPanel.remove(historyPanel);
+                historyPanel = buildHistoryPanel();
+                contentPanel.add(historyPanel, "HISTORY");
+                break;
+            case "TECH_FEEDBACK":
+                contentPanel.remove(technicianFeedbackPanel);
+                technicianFeedbackPanel = buildTechnicianFeedbackPanel();
+                contentPanel.add(technicianFeedbackPanel, "TECH_FEEDBACK");
+                break;
+            case "COMMENT":
+                contentPanel.remove(commentPanel);
+                commentPanel = buildCommentPanel();
+                contentPanel.add(commentPanel, "COMMENT");
+                break;
+            default:
+                return;
+        }
         contentPanel.revalidate();
         contentPanel.repaint();
     }

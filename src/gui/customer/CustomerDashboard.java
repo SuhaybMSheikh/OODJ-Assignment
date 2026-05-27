@@ -1195,6 +1195,11 @@ public class CustomerDashboard extends JFrame {
         commentLbl.setForeground(TEXT_MUTED);
         commentLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        JLabel commentInstructionLbl = new JLabel("If you have no specific comment, you may enter \"NA\".");
+        commentInstructionLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        commentInstructionLbl.setForeground(TEXT_MUTED);
+        commentInstructionLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         JTextArea commentArea = new JTextArea(5, 30);
         commentArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
         commentArea.setBackground(BG_CARD2);
@@ -1318,6 +1323,8 @@ public class CustomerDashboard extends JFrame {
         commentDetailsPanel.add(ratingPanel);
         commentDetailsPanel.add(Box.createVerticalStrut(20));
         commentDetailsPanel.add(commentLbl);
+        commentDetailsPanel.add(Box.createVerticalStrut(4));
+        commentDetailsPanel.add(commentInstructionLbl);
         commentDetailsPanel.add(Box.createVerticalStrut(8));
         commentDetailsPanel.add(commentScroll);
         commentDetailsPanel.add(Box.createVerticalStrut(8));

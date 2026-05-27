@@ -718,8 +718,15 @@ public class CustomerDashboard extends JFrame {
             return;
         }
 
-        if (!phone.matches("\\d{10,11}")) {
-            errorMsg.setText("❌ Phone must be 10-11 digits.");
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            errorMsg.setText("Error: Please enter a valid email address, for example gg@gmail.com.");
+            profileCard.revalidate();
+            profileCard.repaint();
+            return;
+        }
+
+        if (!phone.matches("\\d{10}")) {
+            errorMsg.setText("Error: Phone must contain exactly 10 digits.");
             profileCard.revalidate();
             profileCard.repaint();
             return;

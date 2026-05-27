@@ -813,15 +813,15 @@ public class TechnicianDashboard extends JFrame {
             profileCard.revalidate(); profileCard.repaint();
             return;
         }
-        // Phone: exactly 10 numeric digits
-        if (!phone.matches("\\d{10}")) {
-            errorMsg.setText("\u274C Phone must be exactly 10 digits (numbers only).");
+        // Email: must contain @ and a valid domain
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            errorMsg.setText("Error: Please enter a valid email address, for example gg@gmail.com.");
             profileCard.revalidate(); profileCard.repaint();
             return;
         }
-        // Email: must contain @ and a valid domain
-        if (!email.matches("^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$")) {
-            errorMsg.setText("\u274C Email format is invalid (e.g. name@example.com).");
+        // Phone: exactly 10 numeric digits
+        if (!phone.matches("\\d{10}")) {
+            errorMsg.setText("Error: Phone must contain exactly 10 digits.");
             profileCard.revalidate(); profileCard.repaint();
             return;
         }

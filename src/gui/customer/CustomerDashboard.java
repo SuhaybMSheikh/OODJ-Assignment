@@ -777,7 +777,7 @@ public class CustomerDashboard extends JFrame {
 
         String[] cols = {
             "Appt ID", "Date", "Time", "Service Type", "Service Fee (RM)",
-            "Status", "Comments", "Payment Status"
+            "Status", "Payment Status"
         };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -804,22 +804,13 @@ public class CustomerDashboard extends JFrame {
             .sorted(Comparator.comparing(Appointment::getDate).reversed())
             .collect(java.util.stream.Collectors.toList());
 
-        // Build lookup maps once to avoid repeated scans for each row.
-        List<Comment> comments = FileHandler.loadAllComments();
+        // Build lookup map once to avoid repeated scans for each row.
         List<model.Payment> payments = FileHandler.loadAllPayments();
-        Map<String, String> commentByAppointment = new HashMap<>();
         Map<String, model.Payment> paymentByAppointment = new HashMap<>();
 
-        comments.stream()
-            .filter(c -> resolvedCustomerID.equals(c.getCustomerID()))
-            .forEach(c -> commentByAppointment.put(c.getAppointmentID(), c.getCommentText()));
         payments.forEach(p -> paymentByAppointment.putIfAbsent(p.getAppointmentID(), p));
 
         myAppts.forEach(a -> {
-            String customerComment = commentByAppointment.getOrDefault(
-                a.getAppointmentID(), "No comment yet"
-            );
-
             model.Payment payment = paymentByAppointment.get(a.getAppointmentID());
             double fee = payment != null
                 ? payment.getAmount()
@@ -840,7 +831,6 @@ public class CustomerDashboard extends JFrame {
                 a.getServiceType(),
                 String.format("%.2f", fee),
                 a.getStatus(),
-                customerComment,
                 payStatus
             });
         });
@@ -853,8 +843,7 @@ public class CustomerDashboard extends JFrame {
         setFixedColumnWidth(table, 3, 116);  // service type
         setFixedColumnWidth(table, 4, 126);  // service fee
         setFixedColumnWidth(table, 5, 96);   // status
-        table.getColumnModel().getColumn(6).setPreferredWidth(220); // comments
-        table.getColumnModel().getColumn(7).setPreferredWidth(176); // payment status
+        table.getColumnModel().getColumn(6).setPreferredWidth(220); // payment status
         JScrollPane scroll = makeScrollPane(table);
 
         panel.add(heading, BorderLayout.NORTH);
@@ -1153,7 +1142,7 @@ public class CustomerDashboard extends JFrame {
         JPanel ratingPanel = buildRatingPanel(selectedRating, starButtons, ratingHint);
 
         // Comment text area
-        JLabel commentLbl = new JLabel("Your Comment:");
+        JLabel commentLbl = new JLabel("Tell us about your service experience:");
         commentLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
         commentLbl.setForeground(TEXT_MUTED);
         commentLbl.setAlignmentX(Component.LEFT_ALIGNMENT);

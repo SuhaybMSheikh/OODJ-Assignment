@@ -815,6 +815,21 @@ public class CounterStaffDashboard extends JFrame {
             return;
         }
 
+        // Validate first/last name: alphabets only (no numbers or symbols)
+        if (!firstName.matches("^[A-Za-z]+$")) {
+            errorMsg.setText("❌ First name must contain alphabets only.");
+            profileCard.revalidate();
+            profileCard.repaint();
+            return;
+        }
+
+        if (!lastName.matches("^[A-Za-z]+$")) {
+            errorMsg.setText("❌ Last name must contain alphabets only.");
+            profileCard.revalidate();
+            profileCard.repaint();
+            return;
+        }
+
         if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
             errorMsg.setText("Error: Please enter a valid email address, for example gg@gmail.com.");
             profileCard.revalidate();
@@ -1079,13 +1094,28 @@ public class CounterStaffDashboard extends JFrame {
             String un = fUsername.getText().trim();
             String pw = fPassword.getText().trim();
 
-            if (fn.isEmpty() || ln.isEmpty() || em.isEmpty() || ph.isEmpty()
-                    || un.isEmpty() || pw.isEmpty()) {
-                errLbl.setText("All fields are required.");
+            if (fn.isEmpty() || ln.isEmpty() || em.isEmpty() || ph.isEmpty()) {
+                errLbl.setText("❌ All fields are required.");
                 return;
             }
-            if (!em.contains("@")) {
-                errLbl.setText("Invalid email. Email must contain '@'.");
+            if (!fn.matches("^[A-Za-z]+$")) {
+                errLbl.setText("❌ First name must contain alphabets only.");
+                return;
+            }
+            if (!ln.matches("^[A-Za-z]+$")) {
+                errLbl.setText("❌ Last name must contain alphabets only.");
+                return;
+            }
+            if (!em.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+                errLbl.setText("Error: Please enter a valid email address, for example gg@gmail.com.");
+                return;
+            }
+            if (!ph.matches("\\d{10}")) {
+                errLbl.setText("Error: Phone must contain exactly 10 digits.");
+                return;
+            }
+            if (un.isEmpty() || pw.isEmpty()) {
+                errLbl.setText("❌ All fields are required.");
                 return;
             }
 

@@ -2,9 +2,7 @@ package model;
 
 import gui.customer.CustomerDashboard;
 
-/**
- * SUBCLASS — Customer extends User
- */
+// SUBCLASS — Customer extends User
 public class Customer extends User {
 
     // Customers have an additional field: a separate customer profile ID

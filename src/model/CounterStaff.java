@@ -2,9 +2,8 @@ package model;
 
 import gui.counterstaff.CounterStaffDashboard;
 
-/**
- * SUBCLASS — CounterStaff extends User
- */
+
+// SUBCLASS — CounterStaff extends User
 public class CounterStaff extends User {
 
     public CounterStaff(String userID, String username, String password,

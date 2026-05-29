@@ -27,17 +27,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * GUI CLASS — CustomerDashboard
- * ------------------------------
- * MEMBER 1 is responsible for implementing all features in this file.
- *
- * FEATURES TO IMPLEMENT:
- *   [1] Edit own profile
- *   [2] View personal service and payment history
- *   [3] View technician feedback for each appointment
- *   [4] Leave a comment for counter staff and/or technician
- */
+
 public class CustomerDashboard extends JFrame {
 
     // COLOURS
@@ -51,7 +41,6 @@ public class CustomerDashboard extends JFrame {
     private static final Color BORDER_COLOR = new Color(55,  58,  80);
     private static final Color DANGER       = new Color(239, 68,  68);
 
-    // STATE
     private Customer currentCustomer;
 
     // LAYOUT
@@ -64,7 +53,7 @@ public class CustomerDashboard extends JFrame {
     private String activeCardName = "DASHBOARD";
     private List<JButton> navButtons = new ArrayList<>();
 
-    // PROFILE PANEL STATE
+    // PROFILE PANEL
     private boolean profileEditMode = false;
     private JPanel profileCard;
     private JLabel errorMsg;
@@ -430,7 +419,6 @@ public class CustomerDashboard extends JFrame {
 
 
     //  PANEL 1 — MY PROFILE
-    //  TODO (Member 1): Allow customer to edit their own details
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -1125,7 +1113,6 @@ public class CustomerDashboard extends JFrame {
         showDarkDialog("Success", message);
     }
 
-    //  TODO (Member 1): Allow customer to leave a comment on their appointments
     private JPanel buildCommentPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 20));
         panel.setBackground(BG_DARK);

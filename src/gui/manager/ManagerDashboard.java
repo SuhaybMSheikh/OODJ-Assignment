@@ -19,25 +19,7 @@ import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.*;
 
-/**
- * GUI CLASS — ManagerDashboard
- * -----------------------------
- * The main window for the Manager role.
- *
- * MEMBER 2 is responsible for implementing all features in this file.
- *
- * FEATURES TO IMPLEMENT:
- *   [1] View / Add / Edit / Delete users (managers, counter staff, technicians) (GUI Fixes Required)
- *   [2] Set prices for Normal service and Major service (Partially complete, title and duration cant update into TXT files)
- *   [3] View all feedbacks and comments
- *   [4] Analysed reports (total revenue, appointments by type, etc.)
- *
- * LAYOUT:
- *   The window uses BorderLayout:
- *   - WEST:   Sidebar with navigation buttons
- *   - CENTER: Content panel using CardLayout (swaps panels when nav is clicked)
- *   - NORTH:  Top bar with title and logged-in user's name
- */
+
 public class ManagerDashboard extends JFrame {
 
     // COLOURS
@@ -51,7 +33,6 @@ public class ManagerDashboard extends JFrame {
     protected static final Color SUCCESS      = new Color(34,  197,  94);
     protected static final Color DANGER       = new Color(239,  68,  68);
 
-    // STATE
     private Manager currentManager;
 
     // LAYOUT
@@ -73,14 +54,14 @@ public class ManagerDashboard extends JFrame {
     private JPanel feedbacksPanel;
     private JPanel reportsPanel;
 
-    // Service Prices edit-mode state (used to auto-cancel when navigating away)
+    // Service Prices edit-mode state
     private boolean pricesEditing = false;
     private Runnable pricesCancelAction = null;
 
-    // TOP BAR COMPONENT (stored for updating; opens profile when clicked)
+    // TOP BAR COMPONENT (stored for updating. opens profile when clicked)
     private JButton topBarProfileBtn;
 
-    // PROFILE PANEL STATE
+    // PROFILE PANEL
     private boolean profileEditMode = false;
     private JPanel profileCard;
     private JLabel errorMsg;
@@ -205,7 +186,7 @@ public class ManagerDashboard extends JFrame {
         return sidebar;
     }
 
-    //  CONTENT AREA (card-switched panels)
+    //  CONTENT AREA
     private JPanel buildContent() {
         contentLayout = new CardLayout();
         contentPanel  = new JPanel(contentLayout);
@@ -231,7 +212,7 @@ public class ManagerDashboard extends JFrame {
     }
 
 
-    //  PANEL — HOME (manager dashboard overview; styled like CustomerDashboard)
+    //  PANEL — HOME
     private JPanel buildHomePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 24));
         panel.setBackground(BG_DARK);
@@ -294,7 +275,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /** Wraps stat card so GridLayout sizes cells evenly (CustomerDashboard-style). */
+
     private JPanel wrapManagerStatCard(JPanel statCard) {
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.setOpaque(false);
@@ -302,7 +283,7 @@ public class ManagerDashboard extends JFrame {
         return wrap;
     }
 
-    /** Stat card matching CustomerDashboard createStatCard layout. */
+
     private JPanel createManagerStatCard(String icon, String label, JLabel valueLabel, String subtitle,
                                          Color accentColor, boolean highlightValue) {
         JPanel card = new JPanel();
@@ -352,7 +333,7 @@ public class ManagerDashboard extends JFrame {
         return card;
     }
 
-    /** Clickable quick-action card (CustomerDashboard stat card look). */
+
     private JPanel createManagerQuickActionCard(String icon, String title, String subtitle,
                                                 String cardName, Color accentColor) {
         JPanel card = new JPanel();
@@ -489,11 +470,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /**
-     * Refreshes the profile card UI based on current edit mode state.
-     * In view mode: shows labels + Edit button.
-     * In edit mode: shows text fields + Done/Cancel buttons + error label.
-     */
+
     private void refreshProfileUI() {
         profileCard.removeAll();
 
@@ -620,7 +597,7 @@ public class ManagerDashboard extends JFrame {
             profileCard.add(passwordRow);
             profileCard.add(Box.createVerticalStrut(16));
 
-            // Error message label (initially empty, shown on validation failure)
+            // Error message label
             errorMsg = new JLabel();
             errorMsg.setForeground(DANGER);
             errorMsg.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -647,10 +624,7 @@ public class ManagerDashboard extends JFrame {
         profileCard.repaint();
     }
 
-    /**
-     * Creates an editable JTextField with the given value,
-     * styled with border and colors as specified.
-     */
+
     private JTextField makeEditableTextField(String value) {
         JTextField field = new JTextField(value);
         field.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -674,9 +648,7 @@ public class ManagerDashboard extends JFrame {
         return field;
     }
 
-    /**
-     * Enter edit mode: clear the error message and refresh UI.
-     */
+
     private void enterProfileEditMode() {
         profileEditMode = true;
         if (errorMsg != null)
@@ -684,9 +656,7 @@ public class ManagerDashboard extends JFrame {
         refreshProfileUI();
     }
 
-    /**
-     * Exit edit mode without saving: discard text fields and return to view.
-     */
+
     private void exitProfileEditMode() {
         profileEditMode = false;
         if (errorMsg != null)
@@ -694,17 +664,12 @@ public class ManagerDashboard extends JFrame {
         refreshProfileUI();
     }
 
-    /**
-     * Creates a masked password string with asterisks.
-     * One asterisk per character.
-     */
+
     private String maskPassword(String password) {
         return "*".repeat(password.length());
     }
 
-    /**
-     * Validate profile form and save if valid.
-     */
+
     private void onProfileSave() {
         // Validate: no field should be empty
         String firstName = firstNameField.getText().trim();
@@ -773,18 +738,14 @@ public class ManagerDashboard extends JFrame {
         refreshUsersTable(usersTableModel);
     }
 
-    /**
-     * Updates the top bar user label to reflect the latest name.
-     */
+
     private void updateTopBarLabel() {
         if (topBarProfileBtn != null) {
             topBarProfileBtn.setText("👤  " + currentManager.getFullName() + "  ·  Manager");
         }
     }
 
-    /**
-     * Creates a label + field row for displaying info.
-     */
+
     private JPanel makeInfoRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);
@@ -803,7 +764,6 @@ public class ManagerDashboard extends JFrame {
 
 
     //  PANEL 1 — MANAGE USERS
-    //  TODO (Member 2): Implement full CRUD for users
     private JPanel buildUsersPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -952,7 +912,7 @@ public class ManagerDashboard extends JFrame {
         sorter.setRowFilter(RowFilter.orFilter(filters));
     }
 
-    /** Staff only (excludes customers) for Manage Users. */
+
     private List<User> loadManageableUsers() {
         List<User> manageable = new ArrayList<>();
         for (User u : FileHandler.loadAllUsers()) {
@@ -971,7 +931,7 @@ public class ManagerDashboard extends JFrame {
         return users.get(modelRow);
     }
 
-    /** Clears and reloads the users table from users.txt (staff only, no customers). */
+
     private void refreshUsersTable(DefaultTableModel model) {
         model.setRowCount(0);
         for (User u : loadManageableUsers()) {
@@ -982,9 +942,7 @@ public class ManagerDashboard extends JFrame {
         }
     }
 
-    /**
-     * Opens the Add User dialog. Collects user details and creates a new user.
-     */
+
     private void openAddUserDialog() {
         JDialog dialog = new JDialog(this, "Add New User", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -1161,10 +1119,7 @@ public class ManagerDashboard extends JFrame {
         SwingUtilities.invokeLater(usernameField::requestFocusInWindow);
     }
 
-    /**
-     * Opens the Edit User dialog. Pre-fills with existing data, role is locked.
-     * Uses the table model row index so the correct row is edited when duplicate IDs exist.
-     */
+
     private void openEditUserDialog(int modelRow, DefaultTableModel model) {
         User targetUser = getManageableUser(modelRow);
         if (targetUser == null) {
@@ -1355,9 +1310,7 @@ public class ManagerDashboard extends JFrame {
         SwingUtilities.invokeLater(usernameField::requestFocusInWindow);
     }
 
-    /**
-     * Displays full user details in a window (double-tap feature for users table)
-     */
+
     private void showUserDetailsWindow(int modelRow) {
         User user = getManageableUser(modelRow);
         if (user == null) {
@@ -1410,9 +1363,7 @@ public class ManagerDashboard extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Creates a detail row with label and value
-     */
+
     private JPanel makeDetailRow(String label, String value) {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
@@ -1433,10 +1384,7 @@ public class ManagerDashboard extends JFrame {
         return row;
     }
 
-    /**
-     * Deletes a user with confirmation. Prevents self-deletion.
-     * Uses the table model row index so the correct row is removed when duplicate IDs exist.
-     */
+
     private void deleteUser(int modelRow, DefaultTableModel model) {
         User userToDelete = getManageableUser(modelRow);
         if (userToDelete == null) {
@@ -1469,10 +1417,7 @@ public class ManagerDashboard extends JFrame {
         showThemedInfo("User deleted successfully!");
     }
 
-    /**
-     * Helper: Validates user input. Returns error message if invalid, null if valid.
-     * skipUserID allows edit/profile forms to keep the current user's own values.
-     */
+
     private String validateUserInput(String username, String password, String firstName, 
                                      String lastName, String email, String phone, String skipUserID) {
         if (username.isEmpty()) return "Username cannot be empty.";
@@ -1509,7 +1454,7 @@ public class ManagerDashboard extends JFrame {
         return null;  // all valid
     }
 
-    /** Validates new user fields including generated user ID uniqueness. */
+
     private String validateNewUserInput(String username, String password, String firstName,
                                         String lastName, String email, String phone, String newUserID) {
         String error = validateUserInput(username, password, firstName, lastName, email, phone, null);
@@ -1524,9 +1469,7 @@ public class ManagerDashboard extends JFrame {
         return null;
     }
 
-    /**
-     * Helper: Creates the correct User subclass based on role.
-     */
+
     private User createUserFromRole(String userID, String username, String password, String role,
                                     String firstName, String lastName, String email, String phone) {
         switch (role) {
@@ -1541,9 +1484,7 @@ public class ManagerDashboard extends JFrame {
         }
     }
 
-    /**
-     * Helper: Creates a styled form label.
-     */
+
     private JLabel createFormLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -1554,7 +1495,7 @@ public class ManagerDashboard extends JFrame {
         return label;
     }
 
-    /** Wraps a password field with an icon-only show/hide toggle button. */
+
     private JPanel createPasswordFieldWithToggle(JPasswordField passwordField) {
         char hiddenEchoChar = passwordField.getEchoChar();
         final boolean[] passwordVisible = { false };
@@ -1613,7 +1554,7 @@ public class ManagerDashboard extends JFrame {
         return wrapper;
     }
 
-    /** Small drawn eye icon so the dialog does not depend on external image files. */
+
     private class PasswordVisibilityIcon implements Icon {
         private static final int WIDTH = 18;
         private static final int HEIGHT = 18;
@@ -1658,12 +1599,12 @@ public class ManagerDashboard extends JFrame {
         }
     }
 
-    /** Press Enter in a text field to move focus to the next input. */
+
     private void wireEnterToNextField(JTextField field, JComponent next) {
         field.addActionListener(e -> next.requestFocusInWindow());
     }
 
-    /** Press Enter on a combo box to move focus to the next input. */
+
     private void wireEnterToNextField(JComboBox<?> combo, JComponent next) {
         combo.addKeyListener(new KeyAdapter() {
             @Override
@@ -1725,7 +1666,7 @@ public class ManagerDashboard extends JFrame {
         editBtn.addActionListener(e -> {
             editBtn.setEnabled(false);
 
-            // Switch to editable mode - store references to text fields
+            // Switch to editable mode
             cardsRow.removeAll();
             JPanel normalCardEditable = buildPriceCard(normalName, normalDuration, normalPrice, true);
             JPanel majorCardEditable = buildPriceCard(majorName, majorDuration, majorPrice, true);
@@ -1834,12 +1775,12 @@ public class ManagerDashboard extends JFrame {
         cardsRow.repaint();
     }
 
-    /** Formats hours for display: 1 → "1 hour", 2+ → "N hours". */
+
     private String formatServiceDuration(int hours) {
         return hours == 1 ? "1 hour" : hours + " hours";
     }
 
-    /** Parses duration text or a numeric string into whole hours (minimum 1). */
+
     private int parseServiceDurationHours(String duration) {
         if (duration == null || duration.trim().isEmpty()) {
             return 1;
@@ -1874,7 +1815,7 @@ public class ManagerDashboard extends JFrame {
             card.add(nameLabel);
             card.add(Box.createVerticalStrut(8));
 
-            // Duration (editable) — numeric hours only; hour/hours added on save
+            // Duration (editable)
             JTextField durationField = new JTextField(String.valueOf(parseServiceDurationHours(duration)), 15);
             durationField.setName("durationField");
             durationField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
@@ -1944,7 +1885,6 @@ public class ManagerDashboard extends JFrame {
 
 
     //  PANEL 3 — FEEDBACKS & COMMENTS
-    //  TODO (Member 2): Display all feedbacks + comments in a readable layout
     private JPanel buildFeedbacksPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -1969,7 +1909,7 @@ public class ManagerDashboard extends JFrame {
         var appointmentMap = new java.util.HashMap<String, model.Appointment>();
         appointments.forEach(a -> appointmentMap.put(a.getAppointmentID(), a));
 
-        // Load feedbacks (from technicians) with enriched data
+        // Load feedbacks (from technicians) with data
         feedbacks.forEach(f -> {
             model.Appointment apt = appointmentMap.get(f.getAppointmentID());
             String service = apt != null ? apt.getServiceType() : "Unknown";
@@ -2056,9 +1996,7 @@ public class ManagerDashboard extends JFrame {
         return firstName + " (" + id + ")";
     }
 
-    /**
-     * Builds the toolbar for feedback filtering and search
-     */
+
     private JPanel buildFeedbacksToolbar(DefaultTableModel model, javax.swing.table.TableRowSorter<DefaultTableModel> sorter, JTable table) {
         JPanel toolbar = new JPanel(new BorderLayout(12, 0));
         toolbar.setBackground(BG_CARD);
@@ -2221,9 +2159,7 @@ public class ManagerDashboard extends JFrame {
         return toolbar;
     }
 
-    /**
-     * Helper method to apply filters to the feedback table
-     */
+
     private void applyFeedbackFilters(javax.swing.table.TableRowSorter<DefaultTableModel> sorter, 
                                       DefaultTableModel model, String typeFilter, String searchText) {
         java.util.List<javax.swing.RowFilter<Object, Object>> filters = new java.util.ArrayList<>();
@@ -2353,21 +2289,21 @@ public class ManagerDashboard extends JFrame {
         return scroll;
     }
 
-    /** Helper: Calculate total revenue from paid payment records only */
+
     private double calculateTotalRevenue() {
         return getPaidPayments().stream()
             .mapToDouble(Payment::getAmount)
             .sum();
     }
 
-    /** Helper: Load payments that have actually been paid */
+
     private List<Payment> getPaidPayments() {
         return FileHandler.loadAllPayments().stream()
             .filter(p -> "Paid".equalsIgnoreCase(p.getStatus()))
             .toList();
     }
 
-    /** Helper: Get appointments by appointment ID */
+
     private java.util.Map<String, Appointment> getAppointmentMap() {
         java.util.Map<String, Appointment> appointmentMap = new java.util.LinkedHashMap<>();
         for (Appointment apt : FileHandler.loadAllAppointments()) {
@@ -2376,7 +2312,7 @@ public class ManagerDashboard extends JFrame {
         return appointmentMap;
     }
 
-    /** Helper: Get paid service count by type */
+
     private java.util.Map<String, Integer> getServiceCounts() {
         java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Integer> serviceCounts = new java.util.LinkedHashMap<>();
@@ -2389,7 +2325,7 @@ public class ManagerDashboard extends JFrame {
         return serviceCounts;
     }
 
-    /** Helper: Get paid revenue by service type */
+
     private java.util.Map<String, Double> getRevenueByService() {
         java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Double> serviceRevenue = new java.util.LinkedHashMap<>();
@@ -2402,7 +2338,7 @@ public class ManagerDashboard extends JFrame {
         return serviceRevenue;
     }
 
-    /** Helper: Get paid appointment count by technician */
+
     private java.util.Map<String, Integer> getPaidAppointmentCountsByTechnician() {
         java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Integer> techAppointments = new java.util.LinkedHashMap<>();
@@ -2418,7 +2354,7 @@ public class ManagerDashboard extends JFrame {
         return techAppointments;
     }
 
-    /** Helper: Get paid revenue by technician */
+
     private java.util.Map<String, Double> getRevenueByTechnician() {
         java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Double> techRevenue = new java.util.LinkedHashMap<>();
@@ -2434,7 +2370,7 @@ public class ManagerDashboard extends JFrame {
         return techRevenue;
     }
 
-    /** Helper: Get paid appointment count by customer */
+
     private java.util.Map<String, Integer> getPaidAppointmentCountsByCustomer() {
         java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Integer> customerAppointments = new java.util.LinkedHashMap<>();
@@ -2448,7 +2384,7 @@ public class ManagerDashboard extends JFrame {
         return customerAppointments;
     }
 
-    /** Helper: Get paid spending by customer */
+
     private java.util.Map<String, Double> getSpendingByCustomer() {
         java.util.Map<String, Appointment> appointmentMap = getAppointmentMap();
         java.util.Map<String, Double> customerSpent = new java.util.LinkedHashMap<>();
@@ -2462,7 +2398,7 @@ public class ManagerDashboard extends JFrame {
         return customerSpent;
     }
 
-    /** Overview tab with status distribution pie chart */
+
     private JPanel buildReportsOverviewPanel() {
         JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(BG_DARK);
@@ -2507,7 +2443,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /** Service Type tab with breakdown table and pie chart */
+
     private JPanel buildAppointmentsByServicePanel() {
         JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(BG_DARK);
@@ -2549,7 +2485,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /** Revenue Analysis tab with bar chart and monthly trends */
+
     private JPanel buildRevenueAnalysisPanel() {
         JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(BG_DARK);
@@ -2607,7 +2543,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /** Top Technicians tab with performance metrics */
+
     private JPanel buildTopTechniciansPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
@@ -2643,7 +2579,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /** Customer Metrics tab with customer insights */
+
     private JPanel buildCustomerMetricsPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BG_DARK);
@@ -2679,7 +2615,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /** Helper method to add summary rows to the summary panel */
+
     private void addSummaryRow(JPanel panel, String label, String value) {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
@@ -2699,7 +2635,7 @@ public class ManagerDashboard extends JFrame {
         panel.add(row);
     }
 
-    /** Creates a pie chart panel with custom rendering */
+
     private JPanel createPieChartPanel(String title, java.util.Map<String, Long> data, Color[] colors) {
         JPanel panel = new JPanel(new BorderLayout(0, 6));
         panel.setBackground(BG_CARD);
@@ -2780,7 +2716,7 @@ public class ManagerDashboard extends JFrame {
         return panel;
     }
 
-    /** Creates a bar chart panel with custom rendering */
+
     private JPanel createBarChartPanel(String title, java.util.Map<String, Double> data) {
         JPanel panel = new JPanel(new BorderLayout(0, 6));
         panel.setBackground(BG_CARD);
@@ -2907,7 +2843,6 @@ public class ManagerDashboard extends JFrame {
 
 
     //  SHARED COMPONENT BUILDERS
-    /** Creates a styled sidebar navigation button */
     private JButton makeNavButton(String label, String cardName) {
         JButton btn = new JButton(label);
         btn.setFont(new Font("SansSerif", Font.PLAIN, 16));
@@ -3041,9 +2976,7 @@ public class ManagerDashboard extends JFrame {
         return null;
     }
 
-    /**
-     * Helper: Shows a themed info dialog matching the project color scheme.
-     */
+
     private void showThemedInfo(String message) {
         JDialog dialog = new JDialog(this, "Info", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -3071,9 +3004,7 @@ public class ManagerDashboard extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Helper: Shows a themed confirmation dialog matching the project color scheme.
-     */
+
     private int showThemedConfirm(String title, String message) {
         JDialog dialog = new JDialog(this, title, true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);

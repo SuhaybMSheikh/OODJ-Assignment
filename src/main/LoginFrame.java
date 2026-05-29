@@ -15,12 +15,9 @@ import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 
-/**
- * GUI CLASS — LoginFrame
- */
+
 public class LoginFrame extends JFrame {
 
-    // APU COLOUR PALETTE
     static final Color BG_DARK      = new Color(6,  14,  40);
     static final Color BG_CARD      = new Color(10, 22,  58);
     static final Color BG_CARD2     = new Color(14, 30,  74);
@@ -31,13 +28,11 @@ public class LoginFrame extends JFrame {
     static final Color TEXT_MUTED   = new Color(140, 155, 200);
     static final Color BORDER_COLOR = new Color(30,  50, 100);
 
-    // Role card accent colours
     private static final Color COL_MANAGER  = new Color(245, 168,   0); // gold
     private static final Color COL_STAFF    = new Color( 20, 184, 166); // teal
     private static final Color COL_TECH     = new Color(200,  16,  46); // crimson
     private static final Color COL_CUSTOMER = new Color( 56, 130, 246); // sky blue
 
-    // STATE
     private String        selectedRole = "";
     private BufferedImage logoImage    = null;
 
@@ -60,7 +55,7 @@ public class LoginFrame extends JFrame {
         setUndecorated(true);
         setShape(new RoundRectangle2D.Double(0, 0, 900, 620, 20, 20));
 
-        // Load APU logo — path is relative to the project root (where you run java from)
+        // Load APU logo
         try {
             logoImage = ImageIO.read(new File("src/data/logo_apu.jpg"));
         } catch (IOException e) {
@@ -85,7 +80,7 @@ public class LoginFrame extends JFrame {
         JPanel screen = new JPanel(new BorderLayout());
         screen.setBackground(BG_DARK);
 
-        // Left branding panel
+        // Left panel
         JPanel leftPanel = new JPanel() {
             @Override protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -147,7 +142,7 @@ public class LoginFrame extends JFrame {
         brandBox.add(tagline);
         leftPanel.add(brandBox);
 
-        // Right role-select panel
+        // Right panel
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBackground(BG_CARD);
         rightPanel.setBorder(new EmptyBorder(48, 48, 48, 48));
@@ -316,7 +311,7 @@ public class LoginFrame extends JFrame {
 
 
     //  APU LOGO
-    //  Clips logo_apu.jpg into a circle with a gold ring border
+    //  Crops logo_apu.jpg into a circle with a gold ring border
     private JPanel buildLogo(int size) {
     JPanel square = new JPanel() {
         @Override protected void paintComponent(Graphics g) {
@@ -331,12 +326,10 @@ public class LoginFrame extends JFrame {
             Ellipse2D.Double circle = new Ellipse2D.Double(0, 0, w - 1, h - 1);
 
             if (logoImage != null) {
-                // Step 1: Draw the image inside a circle
                 g2.setClip(circle);
                 g2.drawImage(logoImage, 0, 0, w, h, null);
                 g2.setClip(oldClip);
             } else {
-                // Fallback: navy circle with "APU" text
                 g2.setColor(BG_CARD);
                 g2.fill(circle);
                 g2.setColor(TEXT_PRIMARY);
@@ -347,7 +340,7 @@ public class LoginFrame extends JFrame {
                     (h - fm.getHeight()) / 2 + fm.getAscent());
             }
 
-            // Step 2: gold circular border
+            // gold circular border
             g2.setColor(ACCENT);
             g2.setStroke(new BasicStroke(2.5f));
             g2.draw(circle);
@@ -361,7 +354,6 @@ public class LoginFrame extends JFrame {
 }
 
 
-    //  LOGIN LOGIC
     private void handleLogin() {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword()).trim();
@@ -394,7 +386,6 @@ public class LoginFrame extends JFrame {
     }
 
 
-    //  COMPONENT BUILDERS
     private JPanel makeRoleCard(String role, String subtitle, Color accent, String initial) {
         JPanel card = new JPanel() {
             private boolean hovered = false;

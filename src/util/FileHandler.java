@@ -6,23 +6,9 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * UTILITY CLASS — FileHandler
- * 
- * This is the ONLY class that directly reads and writes .txt files.
- * Every dashboard calls these static methods instead of doing file I/O themselves.
- *
- * HOW TO USE (from any other class):
- *   List<User> users = FileHandler.loadAllUsers();
- *   FileHandler.saveAllUsers(users);
- *
- * All methods are STATIC — you never need to create a FileHandler object.
- */
 public class FileHandler {
 
     // FILE PATHS
-    // Using relative paths so the project works on any computer.
-    // These paths are relative to wherever you RUN the program from (the project root).
     private static final String USERS_FILE        = "src/data/users.txt";
     private static final String CUSTOMERS_FILE    = "src/data/customers.txt";
     private static final String TECHNICIANS_FILE  = "src/data/technicians.txt";
@@ -33,10 +19,6 @@ public class FileHandler {
     private static final String COMMENTS_FILE     = "src/data/comments.txt";
 
     //  USERS
-    /**
-     * Reads users.txt and returns a List of User objects.
-     * Each line is split by "|" and parsed into the correct subclass.
-     */
     public static List<User> loadAllUsers() {
         List<User> users = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(USERS_FILE))) {
@@ -45,9 +27,6 @@ public class FileHandler {
                 line = line.trim();
                 if (line.isEmpty()) continue;  // skip blank lines
 
-                // Split the line into parts using "|" as the separator
-                // parts[0]=ID, [1]=username, [2]=password, [3]=role,
-                // [4]=firstName, [5]=lastName, [6]=email, [7]=phone
                 String[] parts = line.split("\\|");
                 if (parts.length < 8) continue;  // skip malformed lines
 
@@ -83,10 +62,7 @@ public class FileHandler {
         return users;
     }
 
-    /**
-     * Overwrites users.txt with the provided list.
-     * Call this after any add/edit/delete operation on users.
-     */
+
     public static void saveAllUsers(List<User> users) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(USERS_FILE))) {
             for (User u : users) {
@@ -98,10 +74,7 @@ public class FileHandler {
         }
     }
 
-    /**
-     * Finds a user by username — used during login.
-     * Returns null if not found.
-     */
+
     public static User findUserByUsername(String username) {
         for (User u : loadAllUsers()) {
             if (u.getUsername().equals(username)) return u;
@@ -109,9 +82,7 @@ public class FileHandler {
         return null;
     }
 
-    /**
-     * Generates the next available User ID (e.g. if U004 exists, returns U005).
-     */
+
     public static String generateNextUserID() {
         List<User> users = loadAllUsers();
         int max = 0;
@@ -124,11 +95,7 @@ public class FileHandler {
         return String.format("U%03d", max + 1);  // e.g. "U005"
     }
 
-    /**
-     * Updates a user's profile in users.txt.
-     * Finds the user by userID and updates first name, last name, email, phone, and password.
-     * Returns true if successful, false if user not found or error occurs.
-     */
+
     public static boolean updateUserProfile(User user) {
         List<User> users = loadAllUsers();
         boolean found = false;
@@ -149,12 +116,7 @@ public class FileHandler {
         return false;
     }
 
-    /**
-     * Updates a customer's profile in customers.txt.
-     * Finds the customer by userId and updates first name, last name, email, and phone.
-     * Returns true if successful, false if customer not found or error occurs.
-     * Format: customerId|firstName|lastName|email|phone|userId
-     */
+
     public static boolean updateCustomerProfile(Customer customer) {
         List<String> lines = new ArrayList<>();
         boolean found = false;
@@ -170,8 +132,6 @@ public class FileHandler {
                 
                 String[] parts = line.split("\\|");
                 if (parts.length >= 6 && parts[5].equals(customer.getUserID())) {
-                    // Found the matching customer — rebuild the line with updated values
-                    // Format: customerId|firstName|lastName|email|phone|userId
                     String updatedLine = parts[0] + "|" + customer.getFirstName() + "|" 
                                        + customer.getLastName() + "|" + customer.getEmail() 
                                        + "|" + customer.getPhone() + "|" + customer.getUserID();
@@ -203,10 +163,7 @@ public class FileHandler {
         return false;
     }
 
-    /**
-     * Gets the customer's first name for a given customer ID (e.g. C001).
-     * Returns null if the customer record is not found.
-     */
+
     public static String getCustomerFirstNameByID(String customerID) {
         try (BufferedReader reader = new BufferedReader(new FileReader(CUSTOMERS_FILE))) {
             String line;
@@ -367,10 +324,6 @@ public class FileHandler {
     }
 
     //  SERVICES (prices)
-    /**
-     * Returns price for a given service type ("Normal" or "Major").
-     * Returns 0.0 if not found.
-     */
     public static double getServicePrice(String serviceType) {
         try (BufferedReader reader = new BufferedReader(new FileReader(SERVICES_FILE))) {
             String line;
@@ -386,10 +339,7 @@ public class FileHandler {
         return 0.0;
     }
 
-    /**
-     * Returns duration in hours for a service type.
-     * Normal = 1, Major = 3.
-     */
+
     public static int getServiceDuration(String serviceType) {
         try (BufferedReader reader = new BufferedReader(new FileReader(SERVICES_FILE))) {
             String line;
@@ -405,10 +355,7 @@ public class FileHandler {
         return 1;
     }
 
-    /**
-     * Updates the price for a service type.
-     * Manager uses this when setting prices.
-     */
+
     public static void updateServicePrice(String serviceType, double newPrice) {
         List<String> lines = new ArrayList<>();
         boolean updated = false;
@@ -441,11 +388,7 @@ public class FileHandler {
         }
     }
 
-    /**
-     * Updates service title, price, and duration for a service type.
-     * This is used by the Manager to update all service details at once.
-     * Format: ServiceType|Price|Duration
-     */
+
     public static void updateService(String serviceType, double newPrice, String newDuration) {
         List<String> lines = new ArrayList<>();
         boolean updated = false;
@@ -458,7 +401,6 @@ public class FileHandler {
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split("\\|");
                 if (p.length >= 2 && p[0].equalsIgnoreCase(serviceType)) {
-                    // Update price and duration, keep service type as key
                     line = p[0] + "|" + String.format("%.2f", newPrice) + "|" + durationNumber;
                     updated = true;
                 }
@@ -482,10 +424,7 @@ public class FileHandler {
         }
     }
 
-    /**
-     * Loads all services from services.txt
-     * Returns a Map where key = service name, value = price
-     */
+
     public static java.util.Map<String, Double> loadAllServices() {
         java.util.Map<String, Double> services = new java.util.LinkedHashMap<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(SERVICES_FILE))) {
@@ -509,10 +448,6 @@ public class FileHandler {
     }
 
     //  TECHNICIANS
-    /**
-     * Inner class to represent technician mapping data
-     * Format: T001|U003|tech_alex|Alex|Wong
-     */
     public static class TechnicianMapping {
         public String technicianID;  // e.g. T001
         public String userID;        // e.g. U003
@@ -529,11 +464,7 @@ public class FileHandler {
         }
     }
 
-    /**
-     * Loads all technicians from technicians.txt
-     * Returns a List of TechnicianMapping objects
-     * Format: T001|U003|tech_alex|Alex|Wong
-     */
+
     public static List<TechnicianMapping> loadAllTechnicians() {
         List<TechnicianMapping> technicians = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(TECHNICIANS_FILE))) {
@@ -552,10 +483,7 @@ public class FileHandler {
         return technicians;
     }
 
-    /**
-     * Gets the technician ID for a given user ID
-     * Returns the technician ID (e.g. "T001") or null if not found
-     */
+
     public static String getTechnicianIDByUserID(String userID) {
         for (TechnicianMapping tech : loadAllTechnicians()) {
             if (tech.userID.equals(userID)) {
@@ -565,10 +493,7 @@ public class FileHandler {
         return null;
     }
 
-    /**
-     * Gets the user ID for a given technician ID
-     * Returns the user ID (e.g. "U003") or null if not found
-     */
+
     public static String getUserIDByTechnicianID(String technicianID) {
         for (TechnicianMapping tech : loadAllTechnicians()) {
             if (tech.technicianID.equals(technicianID)) {
@@ -578,10 +503,7 @@ public class FileHandler {
         return null;
     }
 
-    /**
-     * Gets the technician name (first + last) for a given technician ID
-     * Returns "FirstName LastName" or null if not found
-     */
+
     public static String getTechnicianNameByID(String technicianID) {
         for (TechnicianMapping tech : loadAllTechnicians()) {
             if (tech.technicianID.equals(technicianID)) {
@@ -591,10 +513,7 @@ public class FileHandler {
         return null;
     }
 
-    /**
-     * Gets the technician's first name for a given technician ID (e.g. T001).
-     * Returns null if the technician record is not found.
-     */
+
     public static String getTechnicianFirstNameByID(String technicianID) {
         for (TechnicianMapping tech : loadAllTechnicians()) {
             if (tech.technicianID.equals(technicianID)) {
@@ -604,9 +523,7 @@ public class FileHandler {
         return null;
     }
 
-    /**
-     * Generates the next available Technician ID (e.g. if T003 exists, returns T004).
-     */
+
     public static String generateNextTechnicianID() {
         List<TechnicianMapping> technicians = loadAllTechnicians();
         int max = 0;
@@ -619,10 +536,7 @@ public class FileHandler {
         return String.format("T%03d", max + 1);  // e.g. "T004"
     }
 
-    /**
-     * Adds a new technician mapping to technicians.txt
-     * Called when a new Technician user is added
-     */
+
     public static void addTechnicianMapping(String userID, String username, String firstName, String lastName) {
         if (getTechnicianIDByUserID(userID) != null) {
             return;
@@ -638,10 +552,7 @@ public class FileHandler {
         }
     }
 
-    /**
-     * Updates an existing technician mapping in technicians.txt (username, first/last name).
-     * Keeps the same technician ID and user ID. If no mapping exists, adds one.
-     */
+
     public static void updateTechnicianMapping(String userID, String username, String firstName, String lastName) {
         List<String> lines = new ArrayList<>();
         boolean updated = false;
@@ -679,10 +590,7 @@ public class FileHandler {
         }
     }
 
-    /**
-     * Removes a technician mapping from technicians.txt based on user ID
-     * Called when a Technician user is deleted
-     */
+
     public static void removeTechnicianMapping(String userID) {
         List<String> lines = new ArrayList<>();
         boolean removed = false;

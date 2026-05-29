@@ -2,9 +2,8 @@ package model;
 
 import gui.technician.TechnicianDashboard;
 
-/**
- * SUBCLASS — Technician extends User
- */
+
+// SUBCLASS — Technician extends User
 public class Technician extends User {
 
     public Technician(String userID, String username, String password,

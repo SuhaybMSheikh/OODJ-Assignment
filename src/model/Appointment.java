@@ -1,12 +1,5 @@
 package model;
 
-/**
- * MODEL CLASS — Appointment
- * --------------------------
- * Represents one row from appointments.txt
- * Format: A001|C001|T001|2025-05-10|09:00|Normal|Pending|Sarah Lim
- *         [0]  [1]  [2]  [3]        [4]   [5]    [6]     [7]
- */
 public class Appointment {
 
     private String appointmentID;

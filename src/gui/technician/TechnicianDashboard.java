@@ -18,25 +18,7 @@ import model.User;
 import util.FileHandler;
 import util.Session;
 
-/**
- * GUI CLASS — TechnicianDashboard
- * MEMBER 4 features:
- *   [1] Edit own profile (first/last name, email, phone, password)
- *       - Username LOCKED (group decision: usernames cannot change once created)
- *       - Validations: alphabets-only names, exactly 10-digit phone, valid email
- *   [2] View appointments assigned to THIS technician
- *   [3] Click an appointment to see full details + customer comment
- *   [4] Mark appointment Completed (and revert back to Ongoing)
- *   [5] Write feedback + View/Edit existing feedback for an appointment
- *   [6] feedbacks.txt saves the technician ID (T001, T002...) not userID
- * EXTRA:
- *   [7] Dashboard home screen with work statistics
- *   [8] Live search / filter on appointments
- *   [9] Customer Comments tab — dedicated view of all customer comments
- *
- * Styling matches ManagerDashboard / CounterStaffDashboard for team consistency
- * (plain nav highlight via paintComponent — no Windows rendering glitch).
- */
+
 public class TechnicianDashboard extends JFrame {
 
     // COLOURS — same structure as Manager; amber accent is the Technician colour
@@ -52,7 +34,6 @@ public class TechnicianDashboard extends JFrame {
     private static final Color INFO         = new Color(59, 130, 246);
     private static final String F = "SansSerif";
 
-    // STATE
     private Technician currentTech;
     private boolean    profileEditMode = false;
     private boolean    passwordVisible = false;
@@ -247,7 +228,7 @@ public class TechnicianDashboard extends JFrame {
             .collect(java.util.stream.Collectors.toList());
 
         int total     = myAppointments.size();
-        // Treat both "Pending" (legacy) and "Ongoing" (new) the same — both are ongoing work
+        // Treat both "Pending" and "Ongoing" the same — both are ongoing work
         int ongoing   = (int) myAppointments.stream()
             .filter(a -> "Ongoing".equals(a.getStatus()) || "Pending".equals(a.getStatus()))
             .count();
@@ -258,7 +239,7 @@ public class TechnicianDashboard extends JFrame {
         int majorCount  = (int) myAppointments.stream().filter(a -> "Major".equals(a.getServiceType())).count();
         int completionRate = total == 0 ? 0 : (completed * 100) / total;
 
-        // Count feedbacks by THIS tech's T-ID (not userID) — matches group standard
+        // Count feedbacks by THIS tech's T-ID (not userID)
         long feedbackCount = FileHandler.loadAllFeedbacks().stream()
             .filter(f -> myTechnicianID != null && myTechnicianID.equals(f.getTechnicianID()))
             .count();
@@ -559,7 +540,7 @@ public class TechnicianDashboard extends JFrame {
         contentPanel.add(commentsPanel, "COMMENTS");
     }
 
-    //  PANEL 1 — MY PROFILE  (plain style, same as Manager / CounterStaff)
+    //  PANEL 1 — MY PROFILE 
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -631,7 +612,7 @@ public class TechnicianDashboard extends JFrame {
             profileCard.add(fullNameRow);
             profileCard.add(Box.createVerticalStrut(12));
 
-            // Username — LOCKED per group decision (Suhayb's chat: usernames cannot change)
+            // Username — LOCKED
             profileCard.add(makeInfoRow("Username", currentTech.getUsername() + "  (cannot be changed)"));
             profileCard.add(Box.createVerticalStrut(12));
 
@@ -786,15 +767,7 @@ public class TechnicianDashboard extends JFrame {
         return "*".repeat(password.length());
     }
 
-    /**
-     * Validates and saves edits to the technician's own profile.
-     * Validations match the group standards from the WhatsApp chat (Jimmy + Basil):
-     *   - All fields required
-     *   - Names: alphabets only
-     *   - Phone: numeric only, exactly 10 digits
-     *   - Email: must be in format a@b.c
-     *   - Username NOT editable (locked per Suhayb's chat decision)
-     */
+
     private void onProfileSave() {
         String firstName = firstNameField.getText().trim();
         String lastName  = lastNameField.getText().trim();
@@ -958,7 +931,7 @@ public class TechnicianDashboard extends JFrame {
         detailHeading.setFont(new Font(F, Font.BOLD, 16));
         detailHeading.setForeground(TEXT_PRIMARY);
         detailHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        // Details — ALL TEXT WHITE per group request (TEXT_PRIMARY = #F0F1FF)
+
         JLabel detailContent = new JLabel(
             "<html><div style='color:#F0F1FF;'>Select an appointment from the<br>"
             + "list to view its details.</div></html>");
@@ -1028,7 +1001,7 @@ public class TechnicianDashboard extends JFrame {
                     break;
                 }
             }
-            // Details — ALL TEXT WHITE (TEXT_PRIMARY = #F0F1FF) per group request
+
             detailContent.setText(
                 "<html><div style='line-height:1.8; color:#F0F1FF;'>"
                 + "<b>Appointment ID:</b>  " + apptID + "<br>"
@@ -1048,7 +1021,7 @@ public class TechnicianDashboard extends JFrame {
                 commentScroll.setVisible(false);
             }
 
-            // Treat both "Pending" (legacy data) and "Ongoing" (new) as "ongoing" work
+
             boolean isOngoing = "Ongoing".equals(status) || "Pending".equals(status);
             if (isOngoing) {
                 completeBtn.setText("\u2705  Mark as Completed");
@@ -1077,7 +1050,7 @@ public class TechnicianDashboard extends JFrame {
             int row = table.convertRowIndexToModel(viewRow);
             String apptID = (String) model.getValueAt(row, 0);
             String currentStatus = (String) model.getValueAt(row, 4);
-            // Both "Pending" (legacy) and "Ongoing" (new) mean the same thing
+
             boolean isCurrentlyOngoing = "Ongoing".equals(currentStatus) || "Pending".equals(currentStatus);
             String newStatus  = isCurrentlyOngoing ? "Completed" : "Ongoing";
             String actionWord = isCurrentlyOngoing ? "mark as Completed" : "revert to Ongoing";
@@ -1150,18 +1123,13 @@ public class TechnicianDashboard extends JFrame {
         return panel;
     }
 
-    /** Returns true if there is a feedback row for the given appointment. */
+
     private boolean feedbackExistsFor(String apptID) {
         return FileHandler.loadAllFeedbacks().stream()
             .anyMatch(f -> f.getAppointmentID().equals(apptID));
     }
 
-    /**
-     * Opens a feedback dialog.
-     * If editMode==true, pre-fills the existing feedback text so the
-     * technician can update it.
-     * Saves to feedbacks.txt using the technician's T-ID (T001, T002...) — NOT userID.
-     */
+
     private void openFeedbackDialog(String apptID, boolean editMode) {
         // Look up existing feedback if editing
         List<Feedback> feedbacks = FileHandler.loadAllFeedbacks();
@@ -1216,7 +1184,7 @@ public class TechnicianDashboard extends JFrame {
         }
     }
 
-    //  PANEL 3 — CUSTOMER COMMENTS (Group-requested tab)
+    //  PANEL 3 — CUSTOMER COMMENTS
     //  Shows all customer comments for appointments assigned to this technician.
     private JPanel buildCommentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
@@ -1379,7 +1347,7 @@ public class TechnicianDashboard extends JFrame {
         return btn;
     }
 
-    // NAV BUTTON — Manager-style highlight (glitch-free on Windows)
+    // NAV BUTTON
     private JButton makeNavButton(String label, String cardName) {
         JButton btn = new JButton(label);
         btn.setFont(new Font(F, Font.PLAIN, 16));
@@ -1455,13 +1423,13 @@ public class TechnicianDashboard extends JFrame {
         table.setFont(new Font(F, Font.PLAIN, 13));
         table.setRowHeight(42);
         table.setGridColor(BORDER_COLOR);
-        // Stronger selection (was alpha 60 = too dim)
+
         table.setSelectionBackground(new Color(ACCENT.getRed(), ACCENT.getGreen(), ACCENT.getBlue(), 110));
         table.setSelectionForeground(TEXT_PRIMARY);
         table.setShowVerticalLines(false);
         table.setFillsViewportHeight(true);
 
-        // Custom renderer: status column gets bright bold color
+
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object v,
                     boolean sel, boolean foc, int row, int col) {

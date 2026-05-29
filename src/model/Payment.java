@@ -1,12 +1,5 @@
 package model;
 
-/**
- * MODEL CLASS — Payment
- * 
- * Represents one row from payments.txt
- * Format: P001|A001|50.00|2025-05-10|Paid
- *         [0]  [1]  [2]   [3]        [4]
- */
 public class Payment {
 
     private String paymentID;

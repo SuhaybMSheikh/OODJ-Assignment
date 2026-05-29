@@ -1,11 +1,5 @@
 package model;
 
-/**
- * ABSTRACT SUPERCLASS — User
- *
- * This is the parent class for ALL user types in the system.
- * Manager, CounterStaff, Technician, and Customer all extend this class.
- */
 public abstract class User {
 
     private String userID;
@@ -39,7 +33,6 @@ public abstract class User {
     }
 
     // Converts this user object back into a line for the .txt file
-    // Format: U001|admin|admin123|Manager|Admin|User|admin@apu.edu.my|0123456789
     public String toFileString() {
         return userID + "|" + username + "|" + password + "|" + role + "|" +
                firstName + "|" + lastName + "|" + email + "|" + phone;

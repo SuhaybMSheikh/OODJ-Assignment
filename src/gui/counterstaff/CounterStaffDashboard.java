@@ -21,19 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * GUI CLASS — CounterStaffDashboard
- * -----------------------------------
- * MEMBER 3 is responsible for implementing all features in this file.
- *
- * FEATURES TO IMPLEMENT:
- * [1] Edit own profile
- * [2] Create / Read / Update / Delete customers
- * [3] Create and assign new appointments
- * - Normal service = 1 hour, Major service = 3 hours
- * - Check technician availability (no time overlap)
- * [4] Collect payment and generate receipt
- */
+
 public class CounterStaffDashboard extends JFrame {
 
     // COLOURS
@@ -46,7 +34,6 @@ public class CounterStaffDashboard extends JFrame {
     private static final Color BORDER_COLOR = new Color(55, 58, 80);
     private static final Color DANGER = new Color(239, 68, 68);
 
-    // STATE
     private CounterStaff currentStaff;
 
     // LAYOUT
@@ -56,10 +43,10 @@ public class CounterStaffDashboard extends JFrame {
     private List<JButton> navButtons = new ArrayList<>();
     private JPanel dashboardPanel;
 
-    // TOP BAR COMPONENT (stored for updating)
+    // TOP BAR COMPONENT
     private JLabel topBarUserLabel;
 
-    // PROFILE PANEL STATE
+    // PROFILE PANEL
     private boolean profileEditMode = false;
     private JPanel profileCard;
     private JLabel errorMsg;
@@ -497,7 +484,6 @@ public class CounterStaffDashboard extends JFrame {
     }
 
     // PANEL 1 — MY PROFILE
-    // TODO (Member 3): Allow staff to edit their own details
     private JPanel buildProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(BG_DARK);
@@ -526,8 +512,8 @@ public class CounterStaffDashboard extends JFrame {
 
     /**
      * Refreshes the profile card UI based on current edit mode state.
-     * In view mode: shows labels + Edit button.
-     * In edit mode: shows text fields + Done/Cancel buttons + error label.
+     * In view mode it shows labels + Edit button.
+     * In edit mode it shows text fields + Done/Cancel buttons + error label.
      */
     private void refreshProfileUI() {
         profileCard.removeAll();
@@ -679,7 +665,7 @@ public class CounterStaffDashboard extends JFrame {
             profileCard.add(passwordRow);
             profileCard.add(Box.createVerticalStrut(16));
 
-            // Error message label (initially empty, shown on validation failure)
+            // Error message label
             errorMsg = new JLabel();
             errorMsg.setForeground(DANGER);
             errorMsg.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -706,10 +692,7 @@ public class CounterStaffDashboard extends JFrame {
         profileCard.repaint();
     }
 
-    /**
-     * Creates an editable JTextField with the given value,
-     * styled with border and colors as specified.
-     */
+
     private JTextField makeEditableTextField(String value) {
         JTextField field = new JTextField(value);
         field.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -765,9 +748,7 @@ public class CounterStaffDashboard extends JFrame {
         };
     }
 
-    /**
-     * Enter edit mode: clear the error message and refresh UI.
-     */
+
     private void enterProfileEditMode() {
         profileEditMode = true;
         passwordVisible = false;
@@ -776,9 +757,7 @@ public class CounterStaffDashboard extends JFrame {
         refreshProfileUI();
     }
 
-    /**
-     * Exit edit mode without saving: discard text fields and return to view.
-     */
+
     private void exitProfileEditMode() {
         profileEditMode = false;
         passwordVisible = false;
@@ -787,24 +766,19 @@ public class CounterStaffDashboard extends JFrame {
         refreshProfileUI();
     }
 
-    /**
-     * Creates a masked password string with asterisks.
-     * One asterisk per character.
-     */
+
     private String maskPassword(String password) {
         return "*".repeat(password.length());
     }
 
-    /**
-     * Validate profile form and save if valid.
-     */
+
     private void onProfileSave() {
         // Validate: no field should be empty
         String firstName = firstNameField.getText().trim();
         String lastName = lastNameField.getText().trim();
         String email = emailField.getText().trim();
         String phone = phoneField.getText().trim();
-        // Get password (it might be masked, so use the original from currentStaff if
+        // Get password (it might be masked, so we use the original from currentStaff if
         // masked)
         String password = passwordVisible ? passwordField.getText().trim() : currentStaff.getPassword();
 
@@ -868,7 +842,7 @@ public class CounterStaffDashboard extends JFrame {
         userToUpdate.setLastName(lastName);
         userToUpdate.setEmail(email);
         userToUpdate.setPhone(phone);
-        // Update password if it was changed (not masked)
+        // Update password if it was changed
         if (passwordVisible) {
             userToUpdate.setPassword(password);
         }
@@ -881,7 +855,7 @@ public class CounterStaffDashboard extends JFrame {
         currentStaff.setLastName(lastName);
         currentStaff.setEmail(email);
         currentStaff.setPhone(phone);
-        // Update password if it was changed (not masked)
+        // Update password if it was changed
         if (passwordVisible) {
             currentStaff.setPassword(password);
         }
@@ -896,9 +870,7 @@ public class CounterStaffDashboard extends JFrame {
         updateTopBarLabel();
     }
 
-    /**
-     * Updates the top bar user label to reflect the latest name.
-     */
+
     private void updateTopBarLabel() {
         if (topBarUserLabel != null) {
             topBarUserLabel.setText("👤  " + currentStaff.getFullName() + "  ·  Counter Staff");
@@ -911,7 +883,7 @@ public class CounterStaffDashboard extends JFrame {
         panel.setBackground(BG_DARK);
         panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
-        // --- Header row ---
+        // Header row
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setOpaque(false);
         JLabel heading = new JLabel("Manage Customers");
@@ -922,7 +894,7 @@ public class CounterStaffDashboard extends JFrame {
         headerRow.add(heading, BorderLayout.WEST);
         headerRow.add(addBtn, BorderLayout.EAST);
 
-        // --- Table ---
+        // Table
         String[] cols = { "Customer ID", "First Name", "Last Name", "Email", "Phone" };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
@@ -936,7 +908,7 @@ public class CounterStaffDashboard extends JFrame {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scroll = makeScrollPane(table);
 
-        // --- Action row ---
+        // Action row
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         actionRow.setOpaque(false);
         JButton editBtn = makeSecondaryButton("✏ Edit");
@@ -954,7 +926,7 @@ public class CounterStaffDashboard extends JFrame {
             }
         });
 
-        // --- Button actions ---
+        // Button actions
         addBtn.addActionListener(e -> showAddCustomerDialog(model));
 
         editBtn.addActionListener(e -> {
@@ -984,9 +956,6 @@ public class CounterStaffDashboard extends JFrame {
         return panel;
     }
 
-    /**
-     * Reloads the customers table from customers.txt.
-     */
     private void refreshCustomersTable(DefaultTableModel model) {
         model.setRowCount(0);
         try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
@@ -1004,9 +973,6 @@ public class CounterStaffDashboard extends JFrame {
         }
     }
 
-    /**
-     * Generates the next Customer ID (e.g. C002 if C001 exists).
-     */
     private String generateNextCustomerID() {
         int max = 0;
         try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
@@ -1024,9 +990,6 @@ public class CounterStaffDashboard extends JFrame {
         return String.format("C%03d", max + 1);
     }
 
-    /**
-     * Opens a modal dialog to add a new customer.
-     */
     private void showAddCustomerDialog(DefaultTableModel tableModel) {
         JDialog dialog = new JDialog(this, "Add Customer", true);
         dialog.setSize(420, 420);
@@ -1153,9 +1116,6 @@ public class CounterStaffDashboard extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Opens a modal dialog to edit an existing customer.
-     */
     private void showEditCustomerDialog(DefaultTableModel tableModel,
                                         String custId, String firstName,
                                         String lastName, String email, String phone) {
@@ -1288,9 +1248,7 @@ public class CounterStaffDashboard extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Deletes a customer after a confirmation dialog.
-     */
+
     private void deleteCustomer(DefaultTableModel tableModel, String custId) {
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Are you sure you want to delete customer " + custId + "?",
@@ -1338,9 +1296,7 @@ public class CounterStaffDashboard extends JFrame {
         refreshCustomersTable(tableModel);
     }
 
-    /**
-     * Creates a label + field row for dialogs.
-     */
+
     private JPanel makeDialogFieldRow(String label, JTextField field) {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
@@ -1361,7 +1317,7 @@ public class CounterStaffDashboard extends JFrame {
         panel.setBackground(BG_DARK);
         panel.setBorder(new EmptyBorder(28, 28, 28, 28));
 
-        // --- Header row ---
+        // Header row
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setOpaque(false);
         JLabel heading = new JLabel("Appointments");
@@ -1372,7 +1328,7 @@ public class CounterStaffDashboard extends JFrame {
         headerRow.add(heading, BorderLayout.WEST);
         headerRow.add(newBtn, BorderLayout.EAST);
 
-        // --- Table ---
+        // Table
         String[] cols = { "Appt ID", "Customer Name", "Technician Name", "Date", "Time", "Service Type", "Status" };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
@@ -1386,7 +1342,7 @@ public class CounterStaffDashboard extends JFrame {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scroll = makeScrollPane(table);
 
-        // --- Button action ---
+        // Button action
         newBtn.addActionListener(e -> showNewAppointmentDialog(model));
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -1404,9 +1360,6 @@ public class CounterStaffDashboard extends JFrame {
         return panel;
     }
 
-    /**
-     * Reloads the appointments table, resolving customer/technician IDs to names.
-     */
     private void refreshAppointmentsTable(DefaultTableModel model) {
         model.setRowCount(0);
 
@@ -1436,9 +1389,7 @@ public class CounterStaffDashboard extends JFrame {
         }
     }
 
-    /**
-     * Opens a modal dialog to create a new appointment.
-     */
+
     private void showNewAppointmentDialog(DefaultTableModel tableModel) {
         JDialog dialog = new JDialog(this, "New Appointment", true);
         dialog.setSize(460, 520);
@@ -1457,7 +1408,7 @@ public class CounterStaffDashboard extends JFrame {
         content.add(titleLbl);
         content.add(Box.createVerticalStrut(16));
 
-        // --- Load customers from customers.txt ---
+        // Load customers from customers.txt
         List<String[]> customerData = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader("src/data/customers.txt"))) {
             String line;
@@ -1479,11 +1430,11 @@ public class CounterStaffDashboard extends JFrame {
         }
         styleComboBox(customerCombo);
 
-        // --- Service type combo ---
+        // Service type combo
         JComboBox<String> serviceCombo = new JComboBox<>(new String[] { "Normal", "Major" });
         styleComboBox(serviceCombo);
 
-        // --- Date field with placeholder ---
+        // Date field with placeholder
         JTextField dateField = makeEditableTextField("");
         dateField.setText("YYYY-MM-DD");
         dateField.setForeground(TEXT_MUTED);
@@ -1504,7 +1455,7 @@ public class CounterStaffDashboard extends JFrame {
             }
         });
 
-        // --- Time slot combo ---
+        // Time slot combo
         JComboBox<String> timeCombo = new JComboBox<>();
         for (int hour = 8; hour <= 17; hour++) {
             timeCombo.addItem(String.format("%02d:00", hour));
@@ -1514,7 +1465,7 @@ public class CounterStaffDashboard extends JFrame {
         }
         styleComboBox(timeCombo);
 
-        // --- Technician combo ---
+        // Technician combo
         JComboBox<String> techCombo = new JComboBox<>();
         styleComboBox(techCombo);
 
@@ -1559,7 +1510,7 @@ public class CounterStaffDashboard extends JFrame {
         timeCombo.addActionListener(e -> refreshTechs.run());
         serviceCombo.addActionListener(e -> refreshTechs.run());
 
-        // --- Build rows ---
+        // Build rows
         content.add(makeDialogComboRow("Customer", customerCombo));
         content.add(Box.createVerticalStrut(8));
         content.add(makeDialogComboRow("Service Type", serviceCombo));
@@ -1681,9 +1632,7 @@ public class CounterStaffDashboard extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Checks whether a technician has no overlapping appointment on the given date/time.
-     */
+
     private boolean isBookedByCurrentStaff(Appointment appointment) {
         String stored = appointment.getCounterStaffID();
         return currentStaff.getUserID().equals(stored)
@@ -1736,7 +1685,6 @@ public class CounterStaffDashboard extends JFrame {
             if (existStart < 0) continue;
             int existEnd = existStart + (FileHandler.getServiceDuration(a.getServiceType()) * 60);
 
-            // Overlap: startA < endB && startB < endA
             if (newStart < existEnd && existStart < newEnd) {
                 return false;
             }
@@ -2000,9 +1948,7 @@ public class CounterStaffDashboard extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Converts "HH:MM" to total minutes since midnight.
-     */
+
     private int timeToMinutes(String time) {
         try {
             String[] parts = time.split(":");
@@ -2018,9 +1964,7 @@ public class CounterStaffDashboard extends JFrame {
         }
     }
 
-    /**
-     * Styles a JComboBox to match the dark theme.
-     */
+
     private void styleComboBox(JComboBox<?> combo) {
         combo.setFont(new Font("SansSerif", Font.PLAIN, 13));
         combo.setBackground(BG_CARD2);
@@ -2029,9 +1973,7 @@ public class CounterStaffDashboard extends JFrame {
         combo.setPreferredSize(new Dimension(200, 28));
     }
 
-    /**
-     * Creates a label + combo box row for dialogs.
-     */
+
     private JPanel makeDialogComboRow(String label, JComboBox<?> combo) {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
@@ -2115,9 +2057,7 @@ public class CounterStaffDashboard extends JFrame {
         return panel;
     }
 
-    /**
-     * Reloads the payments table from payments.txt and adds unpaid Completed appointments.
-     */
+
     private void refreshPaymentsTable(DefaultTableModel model) {
         model.setRowCount(0);
 
@@ -2174,9 +2114,7 @@ public class CounterStaffDashboard extends JFrame {
         }
     }
 
-    /**
-     * Shows a dialog to confirm payment collection.
-     */
+
     private void showCollectPaymentDialog(DefaultTableModel model, String apptID, String customerName, String serviceType, double amount) {
         JDialog dialog = new JDialog(this, "Collect Payment", true);
         dialog.setSize(400, 350);
@@ -2257,9 +2195,7 @@ public class CounterStaffDashboard extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Shows the receipt after payment is confirmed.
-     */
+
     private void showReceiptDialog(String paymentID, String apptID, String customerName, String serviceType, String date, double amount) {
         JDialog dialog = new JDialog(this, "Receipt", true);
         dialog.setSize(400, 380);

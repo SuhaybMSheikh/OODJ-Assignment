@@ -19,10 +19,7 @@ public class Manager extends User {
         super(userID, username, password, "Manager", firstName, lastName, email, phone);
     }
 
-    /**
-     * OVERRIDES the abstract method from User.
-     * Opens the Manager dashboard window.
-     */
+
     @Override
     public void showDashboard() {
         new ManagerDashboard(this).setVisible(true);
